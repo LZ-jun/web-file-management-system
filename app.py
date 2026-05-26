@@ -1,6 +1,7 @@
 import os
 import shutil
 import time
+import secrets
 import json
 from functools import wraps
 from flask import Flask, render_template, request, jsonify, send_from_directory, make_response, session
@@ -8,26 +9,40 @@ from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
+app.config['PERMANENT_SESSION_LIFETIME'] = 300  # 5分钟 = 300秒
+app.config['SESSION_COOKIE_HTTPONLY'] = True      # 禁止JS读Cookie，防XSS
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'     # 防CSRF
 app.secret_key = os.urandom(24)  # 用于加密Cookie
 
+
+# -------------------------- 配置管理 --------------------------
 # -------------------------- 配置管理 --------------------------
 CONFIG_FILE = 'config.json'
+# 强制默认配置：直接存 SHA256，不再用 werkzeug 的格式
+import hashlib
+def get_sha256(text):
+    return hashlib.sha256(text.encode('utf-8')).hexdigest()
+
 DEFAULT_CONFIG = {
-    'upload_max_size': 1024 * 1024 * 1024,  # 单文件最大1GB
+    'upload_max_size': 1024 * 1024 * 1024,
     'username': 'admin',
-    'password_hash': generate_password_hash('admin123'),  # 默认账号admin，密码admin123
+    'password': get_sha256('admin123'),  # 固定字段名：password
     'base_upload_folder': os.path.abspath('uploads')
 }
 
 def load_config():
     if not os.path.exists(CONFIG_FILE):
         save_config(DEFAULT_CONFIG)
-        return DEFAULT_CONFIG
+        return DEFAULT_CONFIG.copy()
     try:
         with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
-            return json.load(f)
+            loaded = json.load(f)
+        # 强制补全所有字段，防止 KeyError
+        final_config = DEFAULT_CONFIG.copy()
+        final_config.update(loaded)
+        return final_config
     except:
-        return DEFAULT_CONFIG
+        return DEFAULT_CONFIG.copy()
 
 def save_config(config):
     with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
@@ -83,12 +98,37 @@ def index():
 def login():
     data = request.json
     username = data.get('username', '')
-    password = data.get('password', '')
+    client_hash = data.get('password_hash', '')  # 前端只传这两个
     
-    if username == config['username'] and check_password_hash(config['password_hash'], password):
-        session['logged_in'] = True
-        return jsonify({'code': 0, 'msg': '登录成功'})
-    return jsonify({'code': -1, 'msg': '账号或密码错误'}), 401
+    # 1. 从服务端Session取挑战值（完全不用前端传盐和时间）
+    if 'login_challenge' not in session:
+        return jsonify({'code': -1, 'msg': '请求已过期，请刷新页面重试'}), 401
+    
+    challenge = session.pop('login_challenge')  # 取出来立即删除
+    salt = challenge['salt']
+    timestamp = challenge['timestamp']
+    
+    # 2. 用服务端存的时间检查：3秒有效期
+    current_time = int(time.time())
+    if abs(current_time - timestamp) > 3:
+        return jsonify({'code': -1, 'msg': '请求已过期，请刷新页面重试'}), 401
+    
+    # 3. 检查账号
+    if username != config['username']:
+        return jsonify({'code': -1, 'msg': '账号或密码错误'}), 401
+    
+    # 4. 用服务端存的盐和时间计算哈希
+    stored_pwd_hash = config['password']
+    server_hash = get_sha256(stored_pwd_hash + salt + str(timestamp))
+    
+    # 5. 比对
+    if client_hash != server_hash:
+        return jsonify({'code': -1, 'msg': '账号或密码错误'}), 401
+    
+    # 6. 登录成功
+    session['logged_in'] = True
+    session.permanent = True
+    return jsonify({'code': 0, 'msg': '登录成功'})
 
 @app.route('/api/logout', methods=['POST'])
 def logout():
@@ -98,7 +138,25 @@ def logout():
 @app.route('/api/check_login', methods=['POST'])
 def check_login():
     return jsonify({'code': 0, 'data': {'logged_in': 'logged_in' in session}})
-
+@app.route('/api/get_challenge', methods=['POST'])
+def get_challenge():
+    salt = secrets.token_hex(16)
+    timestamp = int(time.time())
+    
+    # 存到服务端Session
+    session['login_challenge'] = {
+        'salt': salt,
+        'timestamp': timestamp
+    }
+    session.permanent = True
+    
+    return jsonify({
+        'code': 0,
+        'data': {
+            'salt': salt,
+            'timestamp': timestamp
+        }
+    })
 # -------------------------- 配置接口 --------------------------
 @app.route('/api/get_config', methods=['POST'])
 @login_required
@@ -123,7 +181,9 @@ def save_config_api():
     if 'username' in data:
         new_config['username'] = data['username']
     if 'password' in data and data['password']:
-        new_config['password_hash'] = generate_password_hash(data['password'])
+        # 新逻辑：直接存 SHA256 哈希
+        import hashlib
+        new_config['password'] = hashlib.sha256(data['password'].encode('utf-8')).hexdigest()
     
     save_config(new_config)
     config = new_config
