@@ -341,7 +341,7 @@
         }
 
         /* 右键菜单 */
-        #context-menu {
+        #context-menu, #more-menu {
             position: fixed;
             width: 180px;
             background: var(--card);
@@ -369,6 +369,30 @@
             height: 1px;
             background: var(--border);
             margin: 3px 0;
+        }
+
+        /* 属性弹窗样式 */
+        .attr-item {
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: flex-start;
+        }
+
+        .attr-item:last-child {
+            border-bottom: none;
+        }
+
+        .attr-label {
+            font-weight: 500;
+            color: var(--text-secondary);
+            min-width: 100px;
+            flex-shrink: 0;
+        }
+
+        .attr-value {
+            color: var(--text);
+            word-break: break-all;
         }
 
         /* 模态框通用 */
@@ -598,8 +622,22 @@
         <div class="menu-item" id="menu-cut">✂ 剪切</div>
         <div class="menu-item" id="menu-rename">📛 重命名</div>
         <div class="menu-item" id="menu-move">📦 移动到</div>
+        <div class="menu-item" id="menu-attr">📋 属性</div>
         <div class="menu-separator"></div>
         <div class="menu-item danger" id="menu-delete">🗑 删除</div>
+    </div>
+
+    <!-- 更多按钮下拉菜单 -->
+    <div id="more-menu">
+        <div class="menu-item" onclick="moreMenuAction('download')">⬇ 下载</div>
+        <div class="menu-item" onclick="moreMenuAction('copy')">📋 复制</div>
+        <div class="menu-item" onclick="moreMenuAction('cut')">✂ 剪切</div>
+        <div class="menu-item" onclick="moreMenuAction('rename')">📛 重命名</div>
+        <div class="menu-item" onclick="moreMenuAction('move')">📦 移动到</div>
+        <div class="menu-separator"></div>
+        <div class="menu-item" onclick="moreMenuAction('attr')">📋 属性</div>
+        <div class="menu-separator"></div>
+        <div class="menu-item danger" onclick="moreMenuAction('delete')">🗑 删除</div>
     </div>
 
     <!-- 新建文件夹模态框 -->
@@ -707,6 +745,45 @@
         </div>
     </div>
 
+    <!-- 属性弹窗 -->
+    <div class="modal-mask" id="attr-modal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <span>文件属性</span>
+                <span class="modal-close" onclick="closeModal('attr-modal')">×</span>
+            </div>
+            <div class="modal-body">
+                <div class="attr-item">
+                    <span class="attr-label">文件名：</span>
+                    <span class="attr-value" id="attr-name"></span>
+                </div>
+                <div class="attr-item">
+                    <span class="attr-label">类型：</span>
+                    <span class="attr-value" id="attr-type"></span>
+                </div>
+                <div class="attr-item">
+                    <span class="attr-label">大小：</span>
+                    <span class="attr-value" id="attr-size"></span>
+                </div>
+                <div class="attr-item">
+                    <span class="attr-label">修改时间：</span>
+                    <span class="attr-value" id="attr-mtime"></span>
+                </div>
+                <div class="attr-item">
+                    <span class="attr-label">扩展名：</span>
+                    <span class="attr-value" id="attr-ext"></span>
+                </div>
+                <div class="attr-item">
+                    <span class="attr-label">完整路径：</span>
+                    <span class="attr-value" id="attr-path"></span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-confirm" onclick="closeModal('attr-modal')">确定</button>
+            </div>
+        </div>
+    </div>
+
     <!-- 设置模态框 -->
     <div class="modal-mask" id="settings-modal">
         <div class="modal-box">
@@ -746,6 +823,8 @@
         let treeData = [];
         let currentFileList = []; // 存储当前文件列表，用于批量模式恢复
         let isSidebarCollapsed = false;
+        let moreMenuTarget = null; // 更多菜单当前操作的文件路径
+        let moreMenuFileInfo = {}; // 更多菜单当前文件的详细信息
 
         // 初始化
         window.onload = function() {
@@ -787,6 +866,97 @@
             loadDirTree();
         }
 
+        // 显示更多按钮下拉菜单
+        function showMoreMenu(event, path, name, type, size, sizeFormat, mtime, ext) {
+            event.stopPropagation();
+            const menu = document.getElementById('more-menu');
+
+            // 如果点击的是同一个按钮，切换显示/隐藏
+            if (moreMenuTarget === path && menu.style.display === 'block') {
+                menu.style.display = 'none';
+                return;
+            }
+
+            moreMenuTarget = path;
+            moreMenuFileInfo = {
+                path: path,
+                name: name,
+                type: type,
+                size: size,
+                sizeFormat: sizeFormat,
+                mtime: mtime,
+                ext: ext
+            };
+
+            const rect = event.target.getBoundingClientRect();
+            let left = rect.left;
+            let top = rect.bottom + 5;
+
+            // 显示菜单以获取其尺寸
+            menu.style.display = 'block';
+            const menuWidth = menu.offsetWidth;
+            const menuHeight = menu.offsetHeight;
+
+            // 边界检测：如果超出右边界，往左移动
+            if (left + menuWidth > window.innerWidth) {
+                left = window.innerWidth - menuWidth - 10;
+            }
+            if (left < 10) left = 10;
+
+            // 边界检测：如果超出下边界，往上展开
+            if (top + menuHeight > window.innerHeight) {
+                top = rect.top - menuHeight - 5;
+            }
+            if (top < 10) top = 10;
+
+            menu.style.left = `${left}px`;
+            menu.style.top = `${top}px`;
+        }
+
+        // 更多菜单动作处理
+        function moreMenuAction(action) {
+            document.getElementById('more-menu').style.display = 'none';
+
+            if (!moreMenuTarget) return;
+
+            switch(action) {
+                case 'download':
+                    downloadFile(moreMenuTarget);
+                    break;
+                case 'copy':
+                    copyItem([moreMenuTarget]);
+                    break;
+                case 'cut':
+                    cutItem([moreMenuTarget]);
+                    break;
+                case 'rename':
+                    openRenameModal(moreMenuTarget);
+                    break;
+                case 'move':
+                    openPathSelectModal('move', [moreMenuTarget]);
+                    break;
+                case 'attr':
+                    showAttrModal();
+                    break;
+                case 'delete':
+                    deleteItem([moreMenuTarget]);
+                    break;
+            }
+        }
+
+        // 显示属性弹窗
+        function showAttrModal() {
+            const info = moreMenuFileInfo;
+            document.getElementById('attr-name').textContent = info.name || '-';
+            document.getElementById('attr-type').textContent = info.type === 'folder' ? '文件夹' : '文件';
+            document.getElementById('attr-size').textContent = info.type === 'folder' ? '-' : `${info.sizeFormat} (${info.size} 字节)`;
+            document.getElementById('attr-mtime').textContent = info.mtime || '-';
+            document.getElementById('attr-ext').textContent = info.ext || (info.type === 'folder' ? '-' : '无');
+            document.getElementById('attr-path').textContent = info.path || '-';
+
+            openModal('attr-modal');
+        }
+
         // 事件绑定
         function bindEvents() {
             document.getElementById('btn-back').onclick = goBack;
@@ -807,8 +977,14 @@
             document.getElementById('btn-batch-delete').onclick = toggleBatchMode;
 
             bindContextMenuEvents();
-            document.onclick = () => document.getElementById('context-menu').style.display = 'none';
-            window.onresize = () => document.getElementById('context-menu').style.display = 'none';
+            document.onclick = () => {
+                document.getElementById('context-menu').style.display = 'none';
+                document.getElementById('more-menu').style.display = 'none';
+            };
+            window.onresize = () => {
+                document.getElementById('context-menu').style.display = 'none';
+                document.getElementById('more-menu').style.display = 'none';
+            };
         }
 
         function bindContextMenuEvents() {
@@ -957,8 +1133,7 @@
                             ${isFolder ? `<button onclick="enterFolder('${item.name}')">进入</button>` : ''}
                             ${!isFolder ? `<button onclick="openPreview('${fullPath}')">预览</button>` : ''}
                             ${!isFolder && isTextFile(item.ext) ? `<button onclick="openEditor('${fullPath}')">编辑</button>` : ''}
-                            <button onclick="downloadFile('${fullPath}')">下载</button>
-                            <button class="danger" onclick="deleteItem(['${fullPath}'])">删除</button>
+                            <button onclick="showMoreMenu(event, '${fullPath}', '${item.name}', '${item.type}', '${item.size}', '${item.size_format}', '${item.mtime}', '${item.ext}')">更多 ▼</button>
                         </div>
                     </div>
                 `;
