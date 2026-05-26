@@ -1,41 +1,67 @@
 import os
 import shutil
 import time
-from flask import Flask, render_template, request, jsonify, send_from_directory, make_response
+import json
+from functools import wraps
+from flask import Flask, render_template, request, jsonify, send_from_directory, make_response, session
 from werkzeug.utils import secure_filename
+from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
+app.secret_key = os.urandom(24)  # 用于加密Cookie
 
-# 核心配置
-BASE_UPLOAD_FOLDER = os.path.abspath('uploads')  # 固定根目录绝对路径，彻底解决路径穿越
-app.config['BASE_UPLOAD_FOLDER'] = BASE_UPLOAD_FOLDER
-app.config['MAX_CONTENT_LENGTH'] = 1024 * 1024 * 1024  # 单文件最大1GB，可自行调整
+# -------------------------- 配置管理 --------------------------
+CONFIG_FILE = 'config.json'
+DEFAULT_CONFIG = {
+    'upload_max_size': 1024 * 1024 * 1024,  # 单文件最大1GB
+    'username': 'admin',
+    'password_hash': generate_password_hash('admin123'),  # 默认账号admin，密码admin123
+    'base_upload_folder': os.path.abspath('uploads')
+}
+
+def load_config():
+    if not os.path.exists(CONFIG_FILE):
+        save_config(DEFAULT_CONFIG)
+        return DEFAULT_CONFIG
+    try:
+        with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except:
+        return DEFAULT_CONFIG
+
+def save_config(config):
+    with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
+        json.dump(config, f, ensure_ascii=False, indent=2)
+
+config = load_config()
+BASE_UPLOAD_FOLDER = config['base_upload_folder']
+app.config['MAX_CONTENT_LENGTH'] = config['upload_max_size']
 
 # 自动创建存储根目录
 if not os.path.exists(BASE_UPLOAD_FOLDER):
     os.makedirs(BASE_UPLOAD_FOLDER)
 
-# -------------------------- 核心工具函数（彻底修复非法路径BUG） --------------------------
+# -------------------------- 登录鉴权装饰器 --------------------------
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'logged_in' not in session:
+            return jsonify({'code': -2, 'msg': '未登录'}), 401
+        return f(*args, **kwargs)
+    return decorated_function
+
+# -------------------------- 核心工具函数 --------------------------
 def get_safe_path(user_path):
-    """
-    安全路径处理：规范化用户输入路径，防止../目录穿越，返回绝对路径
-    所有接口必须先通过此函数处理路径，彻底解决非法路径问题
-    """
-    # 处理空路径、首尾空格、斜杠
     user_path = user_path.strip().strip('/').strip('\\')
-    # 拼接根目录，规范化路径（自动处理../ ./ 等穿越字符）
     target_path = os.path.normpath(os.path.join(BASE_UPLOAD_FOLDER, user_path))
-    # 强制校验：最终路径必须在根目录内，否则判定为非法路径
     if not target_path.startswith(BASE_UPLOAD_FOLDER):
         return None
     return target_path
 
 def format_time(timestamp):
-    """格式化文件修改时间"""
     return time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(timestamp))
 
 def format_size(bytes_num):
-    """格式化文件大小"""
     if bytes_num == 0:
         return '0 B'
     units = ['B', 'KB', 'MB', 'GB', 'TB']
@@ -48,11 +74,67 @@ def format_size(bytes_num):
 # -------------------------- 页面路由 --------------------------
 @app.route('/')
 def index():
-    return render_template('index.html')
+    if 'logged_in' in session:
+        return render_template('index.html')
+    return render_template('login.html')
 
-# -------------------------- 核心文件管理接口 --------------------------
-# 1. 获取文件列表（修复路径校验）
+# -------------------------- 登录接口 --------------------------
+@app.route('/api/login', methods=['POST'])
+def login():
+    data = request.json
+    username = data.get('username', '')
+    password = data.get('password', '')
+    
+    if username == config['username'] and check_password_hash(config['password_hash'], password):
+        session['logged_in'] = True
+        return jsonify({'code': 0, 'msg': '登录成功'})
+    return jsonify({'code': -1, 'msg': '账号或密码错误'}), 401
+
+@app.route('/api/logout', methods=['POST'])
+def logout():
+    session.pop('logged_in', None)
+    return jsonify({'code': 0, 'msg': '退出成功'})
+
+@app.route('/api/check_login', methods=['POST'])
+def check_login():
+    return jsonify({'code': 0, 'data': {'logged_in': 'logged_in' in session}})
+
+# -------------------------- 配置接口 --------------------------
+@app.route('/api/get_config', methods=['POST'])
+@login_required
+def get_config():
+    return jsonify({
+        'code': 0,
+        'data': {
+            'upload_max_size': config['upload_max_size'],
+            'username': config['username']
+        }
+    })
+
+@app.route('/api/save_config', methods=['POST'])
+@login_required
+def save_config_api():
+    global config, BASE_UPLOAD_FOLDER
+    data = request.json
+    
+    new_config = config.copy()
+    if 'upload_max_size' in data:
+        new_config['upload_max_size'] = data['upload_max_size']
+    if 'username' in data:
+        new_config['username'] = data['username']
+    if 'password' in data and data['password']:
+        new_config['password_hash'] = generate_password_hash(data['password'])
+    
+    save_config(new_config)
+    config = new_config
+    BASE_UPLOAD_FOLDER = config['base_upload_folder']
+    app.config['MAX_CONTENT_LENGTH'] = config['upload_max_size']
+    
+    return jsonify({'code': 0, 'msg': '保存成功'})
+
+# -------------------------- 核心文件管理接口（全加@login_required） --------------------------
 @app.route('/api/list', methods=['POST'])
+@login_required
 def list_files():
     user_path = request.json.get('path', '')
     full_path = get_safe_path(user_path)
@@ -79,14 +161,13 @@ def list_files():
                 'mtime': format_time(stat_info.st_mtime),
                 'ext': os.path.splitext(item)[1].lower() if not is_dir else ''
             })
-        # 文件夹在前，文件在后，按名称排序
         file_list.sort(key=lambda x: (x['type'] != 'folder', x['name'].lower()))
         return jsonify({'code': 0, 'data': file_list, 'msg': 'success'})
     except Exception as e:
         return jsonify({'code': -1, 'msg': f'读取失败：{str(e)}'}), 500
 
-# 2. 新建文件夹
 @app.route('/api/mkdir', methods=['POST'])
+@login_required
 def create_folder():
     user_path = request.json.get('path', '')
     folder_name = secure_filename(request.json.get('name', ''))
@@ -105,8 +186,8 @@ def create_folder():
     os.makedirs(target_path)
     return jsonify({'code': 0, 'msg': '创建成功'})
 
-# 3. 文件上传（支持多文件）
 @app.route('/api/upload', methods=['POST'])
+@login_required
 def upload_file():
     user_path = request.form.get('path', '')
     full_path = get_safe_path(user_path)
@@ -139,8 +220,8 @@ def upload_file():
     else:
         return jsonify({'code': -1, 'msg': '上传失败', 'fail': fail_list}), 500
 
-# 4. 文件下载
 @app.route('/api/download/<path:user_path>')
+@login_required
 def download_file(user_path):
     full_path = get_safe_path(user_path)
     if full_path is None or not os.path.exists(full_path):
@@ -152,8 +233,8 @@ def download_file(user_path):
     directory, filename = os.path.split(full_path)
     return send_from_directory(directory, filename, as_attachment=True)
 
-# 5. 删除文件/文件夹（支持批量）
 @app.route('/api/delete', methods=['POST'])
+@login_required
 def delete_item():
     paths = request.json.get('paths', [])
     if not paths:
@@ -183,8 +264,8 @@ def delete_item():
         'fail': fail_list
     })
 
-# 6. 重命名
 @app.route('/api/rename', methods=['POST'])
+@login_required
 def rename_item():
     user_path = request.json.get('path', '')
     new_name = secure_filename(request.json.get('new_name', ''))
@@ -205,8 +286,8 @@ def rename_item():
     os.rename(full_path, new_path)
     return jsonify({'code': 0, 'msg': '重命名成功'})
 
-# 7. 移动文件/文件夹（剪切粘贴）
 @app.route('/api/move', methods=['POST'])
+@login_required
 def move_item():
     source_paths = request.json.get('source_paths', [])
     target_path = request.json.get('target_path', '')
@@ -246,8 +327,8 @@ def move_item():
         'fail': fail_list
     })
 
-# 8. 复制文件/文件夹
 @app.route('/api/copy', methods=['POST'])
+@login_required
 def copy_item():
     source_paths = request.json.get('source_paths', [])
     target_path = request.json.get('target_path', '')
@@ -290,8 +371,8 @@ def copy_item():
         'fail': fail_list
     })
 
-# 9. 读取文本文件内容（用于在线编辑）
 @app.route('/api/read_file', methods=['POST'])
+@login_required
 def read_file():
     user_path = request.json.get('path', '')
     full_path = get_safe_path(user_path)
@@ -301,12 +382,10 @@ def read_file():
     if os.path.isdir(full_path):
         return jsonify({'code': -1, 'msg': '不能读取文件夹'}), 400
     
-    # 限制文件大小，防止大文件卡死
     if os.path.getsize(full_path) > 10 * 1024 * 1024:
         return jsonify({'code': -1, 'msg': '文件超过10MB，不支持在线编辑'}), 400
     
     try:
-        # 尝试多种编码读取
         encodings = ['utf-8', 'gbk', 'gb2312', 'latin-1']
         content = ''
         for enc in encodings:
@@ -320,8 +399,8 @@ def read_file():
     except Exception as e:
         return jsonify({'code': -1, 'msg': f'读取失败：{str(e)}'}), 500
 
-# 10. 保存文本文件内容（用于在线编辑）
 @app.route('/api/save_file', methods=['POST'])
+@login_required
 def save_file():
     user_path = request.json.get('path', '')
     content = request.json.get('content', '')
@@ -339,15 +418,14 @@ def save_file():
     except Exception as e:
         return jsonify({'code': -1, 'msg': f'保存失败：{str(e)}'}), 500
 
-# 11. 获取目录树（用于移动/复制时选择目标路径）
 @app.route('/api/dirtree', methods=['POST'])
+@login_required
 def get_dirtree():
     def scan_dir(path, root_path):
         tree = []
         for item in os.listdir(path):
             item_path = os.path.join(path, item)
             if os.path.isdir(item_path):
-                # 计算相对路径
                 relative_path = os.path.relpath(item_path, root_path).replace('\\', '/')
                 children = scan_dir(item_path, root_path)
                 tree.append({
@@ -358,11 +436,40 @@ def get_dirtree():
         return tree
     
     try:
-        tree = scan_dir(BASE_UPLOAD_FOLDER, BASE_UPLOAD_FOLDER)
-        return jsonify({'code': 0, 'data': tree, 'msg': 'success'})
+        # 新增：在最顶层包一层根目录节点
+        root_tree = [{
+            'name': '根目录/',
+            'path': '',
+            'children': scan_dir(BASE_UPLOAD_FOLDER, BASE_UPLOAD_FOLDER)
+        }]
+        return jsonify({'code': 0, 'data': root_tree, 'msg': 'success'})
     except Exception as e:
         return jsonify({'code': -1, 'msg': f'获取目录树失败：{str(e)}'}), 500
+@app.route('/api/create_file', methods=['POST'])
+@login_required
+def create_file():
+    user_path = request.json.get('path', '')
+    filename = secure_filename(request.json.get('filename', ''))
+    
+    if not filename:
+        return jsonify({'code': -1, 'msg': '文件名不能为空'}), 400
+    
+    full_path = get_safe_path(user_path)
+    if full_path is None:
+        return jsonify({'code': -1, 'msg': '非法路径'}), 403
+    if not os.path.exists(full_path):
+        return jsonify({'code': -1, 'msg': '路径不存在'}), 404
+    
+    target_file = os.path.join(full_path, filename)
+    if os.path.exists(target_file):
+        return jsonify({'code': -1, 'msg': '文件已存在'}), 400
+    
+    try:
+        # 创建0字节空文件
+        open(target_file, 'w', encoding='utf-8').close()
+        return jsonify({'code': 0, 'msg': '创建成功'})
+    except Exception as e:
+        return jsonify({'code': -1, 'msg': f'创建失败：{str(e)}'}), 500
 
 if __name__ == '__main__':
-    # 0.0.0.0 允许局域网内所有设备访问
     app.run(host='0.0.0.0', port=80, debug=False)
