@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>远程存储管理系统 | 对标蚁剑</title>
+    <title>远程存储管理系统</title>
     <style>
         * {
             margin: 0;
@@ -34,7 +34,149 @@
             overflow: hidden;
         }
 
-        /* 顶部工具栏 */
+        /* 顶部导航栏 */
+        .header {
+            background: var(--card);
+            padding: 10px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-title {
+            font-size: 18px;
+            font-weight: 500;
+        }
+
+        .header-right {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .header-right button {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            background: var(--primary);
+            color: white;
+            cursor: pointer;
+        }
+
+        .header-right button:hover {
+            background: #096dd9;
+        }
+
+        /* 主内容区：左右布局 */
+        .main-container {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* 左侧目录树 */
+        .sidebar {
+            width: 280px;
+            background: var(--card);
+            border-right: 1px solid var(--border);
+            overflow-y: auto;
+            padding: 15px;
+            transition: width 0.3s ease, padding 0.3s ease;
+            flex-shrink: 0;
+        }
+
+        .sidebar.collapsed {
+            width: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        .sidebar-toggle {
+            position: absolute;
+            left: 280px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 20px;
+            height: 60px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-left: none;
+            border-radius: 0 4px 4px 0;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            transition: left 0.3s ease;
+        }
+
+        .sidebar.collapsed + .sidebar-toggle {
+            left: 0;
+        }
+
+        .sidebar-toggle:hover {
+            background: var(--hover);
+        }
+
+        .sidebar-toggle-icon {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .sidebar.collapsed + .sidebar-toggle .sidebar-toggle-icon {
+            transform: rotate(180deg);
+        }
+
+        .tree-title {
+            font-weight: 500;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .tree-node {
+            margin: 5px 0;
+        }
+
+        .tree-node-header {
+            padding: 6px 10px;
+            cursor: pointer;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tree-node-header:hover, .tree-node-header.active {
+            background: var(--hover);
+        }
+
+        .tree-toggle {
+            width: 16px;
+            text-align: center;
+            cursor: pointer;
+        }
+
+        .tree-children {
+            margin-left: 20px;
+            display: none;
+        }
+
+        .tree-children.open {
+            display: block;
+        }
+
+        /* 右侧文件区 */
+        .content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* 工具栏 */
         .toolbar {
             background: var(--card);
             padding: 10px 20px;
@@ -55,7 +197,6 @@
             display: flex;
             align-items: center;
             gap: 5px;
-            transition: background 0.2s;
         }
 
         .toolbar button:hover {
@@ -75,7 +216,7 @@
             cursor: not-allowed;
         }
 
-        /* 路径导航栏 */
+        /* 路径栏 */
         .path-bar {
             background: var(--card);
             padding: 8px 20px;
@@ -108,43 +249,27 @@
             color: var(--text-secondary);
         }
 
-        .path-input {
-            flex: 1;
-            max-width: 500px;
-            padding: 6px 10px;
-            border: 1px solid var(--border);
-            border-radius: 4px;
-            outline: none;
-        }
-
-        .path-input:focus {
-            border-color: var(--primary);
-        }
-
-        /* 主内容区 */
-        .main-content {
+        /* 文件列表 */
+        .file-list-container {
             flex: 1;
             overflow: hidden;
             display: flex;
             flex-direction: column;
+            background: var(--card);
         }
 
-        /* 列表表头 */
         .table-header {
             display: grid;
             grid-template-columns: 40px 3fr 1fr 1fr 120px;
             padding: 10px 20px;
-            background: var(--card);
             border-bottom: 1px solid var(--border);
             font-weight: 500;
             color: var(--text-secondary);
         }
 
-        /* 文件列表 */
         .file-list {
             flex: 1;
             overflow-y: auto;
-            background: var(--card);
         }
 
         .file-item {
@@ -154,7 +279,6 @@
             border-bottom: 1px solid #f0f0f0;
             align-items: center;
             cursor: pointer;
-            transition: background 0.2s;
         }
 
         .file-item:hover {
@@ -169,6 +293,11 @@
             width: 16px;
             height: 16px;
             cursor: pointer;
+            display: none; /* 默认隐藏 */
+        }
+
+        .file-list.show-checkbox .file-checkbox {
+            display: block; /* 批量删除时显示 */
         }
 
         .file-name {
@@ -226,7 +355,6 @@
         .menu-item {
             padding: 8px 15px;
             cursor: pointer;
-            transition: background 0.2s;
         }
 
         .menu-item:hover {
@@ -243,7 +371,7 @@
             margin: 3px 0;
         }
 
-        /* 模态框通用样式 */
+        /* 模态框通用 */
         .modal-mask {
             position: fixed;
             top: 0;
@@ -342,7 +470,7 @@
             border-color: var(--primary);
         }
 
-        /* 文本编辑器模态框 */
+        /* 编辑器模态框 */
         #editor-modal .modal-box {
             max-width: 1000px;
             height: 80vh;
@@ -390,76 +518,73 @@
             font-family: 'Consolas', monospace;
         }
 
-        /* 目录树样式 */
-        .dir-tree {
-            max-height: 400px;
-            overflow-y: auto;
-        }
-
-        .tree-node {
-            margin: 5px 0;
-        }
-
-        .tree-node-name {
-            padding: 5px 8px;
-            cursor: pointer;
-            border-radius: 4px;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .tree-node-name:hover, .tree-node-name.active {
-            background: var(--hover);
-        }
-
-        .tree-children {
-            margin-left: 20px;
-        }
-
-        /* 上传文件输入框 */
-        #file-input {
-            display: none;
-        }
-
         /* 空状态 */
         .empty-state {
             padding: 50px;
             text-align: center;
             color: var(--text-secondary);
         }
+
+        /* 上传文件输入框 */
+        #file-input {
+            display: none;
+        }
     </style>
 </head>
 <body>
-    <!-- 顶部工具栏 -->
-    <div class="toolbar">
-        <button id="btn-back">⬅ 返回上一级</button>
-        <button id="btn-mkdir">📁 新建文件夹</button>
-        <label for="file-input">
-            <button type="button">📤 上传文件</button>
-        </label>
-        <input type="file" id="file-input" multiple>
-        <button id="btn-paste" disabled>📋 粘贴</button>
-        <button id="btn-delete-batch" class="danger" disabled>🗑 批量删除</button>
-    </div>
-
-    <!-- 路径导航栏 -->
-    <div class="path-bar">
-        <div class="path-breadcrumb" id="path-breadcrumb"></div>
-        <input type="text" class="path-input" id="path-input" placeholder="输入路径回车跳转">
-        <button id="btn-jump">跳转</button>
+    <!-- 顶部导航 -->
+    <div class="header">
+        <div class="header-title">远程存储管理系统</div>
+        <div class="header-right">
+            <button onclick="refreshFileList()">🔄 刷新</button>
+            <button onclick="openSettings()">⚙ 设置</button>
+            <button onclick="logout()">退出登录</button>
+        </div>
     </div>
 
     <!-- 主内容区 -->
-    <div class="main-content">
-        <div class="table-header">
-            <div></div>
-            <div>文件名</div>
-            <div>大小</div>
-            <div>修改时间</div>
-            <div>操作</div>
+    <div class="main-container">
+        <!-- 左侧目录树 -->
+        <div class="sidebar" id="sidebar">
+            <div class="tree-title">📁 目录树</div>
+            <div id="dir-tree"></div>
         </div>
-        <div class="file-list" id="file-list"></div>
+        <div class="sidebar-toggle" onclick="toggleSidebar()" title="收起/展开目录树">
+            <span class="sidebar-toggle-icon">◀</span>
+        </div>
+
+        <!-- 右侧文件区 -->
+        <div class="content">
+            <!-- 工具栏 -->
+            <div class="toolbar">
+                <button id="btn-back">⬅ 返回上一级</button>
+                <button id="btn-mkdir">📁 新建文件夹</button>
+                <button id="btn-create-file">📄 创建文件</button>
+                <!-- 修复：给label加id，button加明确的点击触发逻辑 -->
+                <label id="upload-label" for="file-input" style="display: none;"></label>
+                <button type="button" id="btn-upload">📤 上传文件</button>
+                <input type="file" id="file-input" multiple style="display: none;">
+                <button id="btn-paste" disabled>📋 粘贴</button>
+                <button id="btn-batch-delete">☑ 批量删除</button>
+            </div>
+
+            <!-- 路径栏 -->
+            <div class="path-bar">
+                <div class="path-breadcrumb" id="path-breadcrumb"></div>
+            </div>
+
+            <!-- 文件列表 -->
+            <div class="file-list-container">
+                <div class="table-header">
+                    <div></div>
+                    <div>文件名</div>
+                    <div>大小</div>
+                    <div>修改时间</div>
+                    <div>操作</div>
+                </div>
+                <div class="file-list" id="file-list"></div>
+            </div>
+        </div>
     </div>
 
     <!-- 右键菜单 -->
@@ -496,7 +621,25 @@
             </div>
         </div>
     </div>
-
+    <!-- 创建文件模态框 -->
+    <div class="modal-mask" id="create-file-modal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <span>创建文件</span>
+                <span class="modal-close" onclick="closeModal('create-file-modal')">×</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-item">
+                    <label>文件名（包含后缀）</label>
+                    <input type="text" id="create-filename" placeholder="例如：test.txt、index.html、main.py">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closeModal('create-file-modal')">取消</button>
+                <button class="btn-confirm" onclick="confirmCreateFile()">确定</button>
+            </div>
+        </div>
+    </div>
     <!-- 重命名模态框 -->
     <div class="modal-mask" id="rename-modal">
         <div class="modal-box">
@@ -517,7 +660,7 @@
         </div>
     </div>
 
-    <!-- 移动/复制 路径选择模态框 -->
+    <!-- 路径选择模态框 -->
     <div class="modal-mask" id="path-select-modal">
         <div class="modal-box">
             <div class="modal-header">
@@ -525,7 +668,7 @@
                 <span class="modal-close" onclick="closeModal('path-select-modal')">×</span>
             </div>
             <div class="modal-body">
-                <div class="dir-tree" id="dir-tree"></div>
+                <div class="dir-tree" id="path-select-tree"></div>
             </div>
             <div class="modal-footer">
                 <button class="btn-cancel" onclick="closeModal('path-select-modal')">取消</button>
@@ -534,7 +677,7 @@
         </div>
     </div>
 
-    <!-- 文本编辑器模态框 -->
+    <!-- 编辑器模态框 -->
     <div class="modal-mask" id="editor-modal">
         <div class="modal-box">
             <div class="modal-header">
@@ -564,46 +707,110 @@
         </div>
     </div>
 
+    <!-- 设置模态框 -->
+    <div class="modal-mask" id="settings-modal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <span>系统设置</span>
+                <span class="modal-close" onclick="closeModal('settings-modal')">×</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-item">
+                    <label>账号</label>
+                    <input type="text" id="settings-username" placeholder="请输入账号">
+                </div>
+                <div class="form-item">
+                    <label>新密码（留空则不修改）</label>
+                    <input type="password" id="settings-password" placeholder="请输入新密码">
+                </div>
+                <div class="form-item">
+                    <label>单文件最大大小（MB）</label>
+                    <input type="number" id="settings-max-size" placeholder="请输入大小">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closeModal('settings-modal')">取消</button>
+                <button class="btn-confirm" onclick="saveSettings()">保存</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // 全局变量
-        let currentPath = ''; // 当前所在路径（相对根目录）
-        let selectedItems = []; // 选中的文件/文件夹
-        let clipboard = { type: '', paths: [] }; // 剪切板：type=copy/cut
-        let currentActiveItem = ''; // 当前右键选中的项目
-        let selectedTargetPath = ''; // 移动/复制选择的目标路径
+        let currentPath = '';
+        let selectedItems = [];
+        let clipboard = { type: '', paths: [] };
+        let currentActiveItem = '';
+        let selectedTargetPath = '';
+        let isBatchMode = false;
+        let treeData = [];
+        let currentFileList = []; // 存储当前文件列表，用于批量模式恢复
+        let isSidebarCollapsed = false;
 
-        // 页面加载完成后初始化
+        // 初始化
         window.onload = function() {
+            loadDirTree();
             loadFileList();
             bindEvents();
+            checkWindowSize();
         }
 
-        // -------------------------- 核心事件绑定 --------------------------
+        // 检查窗口大小，自动收起目录树
+        function checkWindowSize() {
+            if (window.innerWidth < 900 && !isSidebarCollapsed) {
+                toggleSidebar(true);
+            }
+        }
+
+        // 监听窗口大小变化
+        window.addEventListener('resize', checkWindowSize);
+
+        // 切换目录树收起/展开
+        function toggleSidebar(forceCollapse = null) {
+            const sidebar = document.getElementById('sidebar');
+            if (forceCollapse !== null) {
+                isSidebarCollapsed = forceCollapse;
+            } else {
+                isSidebarCollapsed = !isSidebarCollapsed;
+            }
+
+            if (isSidebarCollapsed) {
+                sidebar.classList.add('collapsed');
+            } else {
+                sidebar.classList.remove('collapsed');
+            }
+        }
+
+        // 刷新文件列表
+        function refreshFileList() {
+            loadFileList();
+            loadDirTree();
+        }
+
+        // 事件绑定
         function bindEvents() {
-            // 返回上一级
             document.getElementById('btn-back').onclick = goBack;
-            // 新建文件夹
             document.getElementById('btn-mkdir').onclick = () => openModal('mkdir-modal');
-            // 文件上传
-            document.getElementById('file-input').onchange = uploadFiles;
-            // 粘贴
+            document.getElementById('btn-create-file').onclick = () => {
+                openModal('create-file-modal');
+                document.getElementById('create-filename').value = '';
+                document.getElementById('create-filename').focus();
+            };
+            // 修复：明确点击按钮触发input，input change触发上传
+            document.getElementById('btn-upload').onclick = () => document.getElementById('file-input').click();
+            document.getElementById('file-input').onchange = function(e) {
+                if (e.target.files.length > 0) {
+                    uploadFiles(e);
+                }
+            };
             document.getElementById('btn-paste').onclick = pasteItem;
-            // 批量删除
-            document.getElementById('btn-delete-batch').onclick = deleteBatch;
-            // 路径跳转
-            document.getElementById('btn-jump').onclick = jumpToPath;
-            document.getElementById('path-input').onkeydown = (e) => e.key === 'Enter' && jumpToPath();
+            document.getElementById('btn-batch-delete').onclick = toggleBatchMode;
 
-            // 右键菜单事件
             bindContextMenuEvents();
-
-            // 点击空白处关闭右键菜单
             document.onclick = () => document.getElementById('context-menu').style.display = 'none';
-            // 窗口大小改变关闭右键菜单
             window.onresize = () => document.getElementById('context-menu').style.display = 'none';
         }
 
-        // 右键菜单事件绑定
         function bindContextMenuEvents() {
             const menu = document.getElementById('context-menu');
             document.getElementById('menu-enter').onclick = () => enterFolder(currentActiveItem);
@@ -617,8 +824,79 @@
             document.getElementById('menu-delete').onclick = () => deleteItem([currentActiveItem]);
         }
 
-        // -------------------------- 核心接口请求 --------------------------
-        // 加载文件列表
+        // -------------------------- 目录树相关 --------------------------
+        async function loadDirTree() {
+            try {
+                const res = await fetch('/api/dirtree', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await res.json();
+                if (data.code === 0) {
+                    treeData = data.data;
+                    renderDirTree(treeData, document.getElementById('dir-tree'));
+                }
+            } catch (e) {
+                console.error('加载目录树失败', e);
+            }
+        }
+
+        function renderDirTree(nodes, container) {
+            container.innerHTML = '';
+            nodes.forEach(node => {
+                const div = document.createElement('div');
+                div.className = 'tree-node';
+                // 根目录默认展开
+                const isRoot = node.path === '';
+                div.innerHTML = `
+                    <div class="tree-node-header ${isRoot ? 'active' : ''}" data-path="${node.path}" onclick="selectTreeDir(this, '${node.path}')">
+                        <span class="tree-toggle" onclick="event.stopPropagation(); toggleTreeNode(this)">${node.children.length > 0 ? (isRoot ? '▼' : '▶') : ''}</span>
+                        <span>${node.name.includes('📂') ? '' : '📁'}</span>
+                        <span>${node.name.replace('📂 ', '')}</span>
+                    </div>
+                    <div class="tree-children ${isRoot ? 'open' : ''}">
+                        ${node.children.length > 0 ? renderDirTreeToString(node.children) : ''}
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function renderDirTreeToString(nodes) {
+            let html = '';
+            nodes.forEach(node => {
+                html += `
+                    <div class="tree-node">
+                        <div class="tree-node-header" data-path="${node.path}" onclick="selectTreeDir(this, '${node.path}')">
+                            <span class="tree-toggle" onclick="event.stopPropagation(); toggleTreeNode(this)">${node.children.length > 0 ? '▶' : ''}</span>
+                            <span>📁</span>
+                            <span>${node.name}</span>
+                        </div>
+                        <div class="tree-children">
+                            ${node.children.length > 0 ? renderDirTreeToString(node.children) : ''}
+                        </div>
+                    </div>
+                `;
+            });
+            return html;
+        }
+
+        function toggleTreeNode(el) {
+            const children = el.parentElement.nextElementSibling;
+            if (children) {
+                children.classList.toggle('open');
+                el.innerText = children.classList.contains('open') ? '▼' : '▶';
+            }
+        }
+
+        function selectTreeDir(el, path) {
+            document.querySelectorAll('.tree-node-header').forEach(item => item.classList.remove('active'));
+            el.classList.add('active');
+            currentPath = path;
+            loadFileList();
+        }
+
+        // -------------------------- 文件列表相关 --------------------------
         async function loadFileList() {
             try {
                 const res = await fetch('/api/list', {
@@ -631,12 +909,13 @@
                 if (data.code !== 0) {
                     alert(data.msg);
                     document.getElementById('file-list').innerHTML = `<div class="empty-state">${data.msg}</div>`;
+                    currentFileList = [];
                     return;
                 }
 
+                currentFileList = data.data; // 保存当前文件列表
                 renderFileList(data.data);
                 renderBreadcrumb();
-                // 清空选中状态
                 selectedItems = [];
                 updateBatchButton();
             } catch (e) {
@@ -644,7 +923,6 @@
             }
         }
 
-        // 渲染文件列表
         function renderFileList(list) {
             const container = document.getElementById('file-list');
             if (list.length === 0) {
@@ -688,7 +966,6 @@
             container.innerHTML = html;
         }
 
-        // 渲染面包屑导航
         function renderBreadcrumb() {
             const container = document.getElementById('path-breadcrumb');
             const paths = currentPath ? currentPath.split('/') : [];
@@ -705,17 +982,15 @@
             });
             
             container.innerHTML = html;
-            document.getElementById('path-input').value = '/' + currentPath;
         }
 
-        // -------------------------- 路径导航相关 --------------------------
-        // 进入文件夹
+        // -------------------------- 路径导航 --------------------------
         function enterFolder(name) {
             currentPath = currentPath ? `${currentPath}/${name}` : name;
             loadFileList();
+            loadDirTree();
         }
 
-        // 返回上一级
         function goBack() {
             if (!currentPath) return;
             const paths = currentPath.split('/');
@@ -724,21 +999,39 @@
             loadFileList();
         }
 
-        // 跳转到根目录
         function jumpToRoot() {
             currentPath = '';
             loadFileList();
         }
 
-        // 跳转到指定路径
-        function jumpToPath(path = null) {
-            const targetPath = path !== null ? path : document.getElementById('path-input').value.trim().replace(/^\/+/, '');
-            currentPath = targetPath;
+        function jumpToPath(path) {
+            currentPath = path;
             loadFileList();
         }
 
-        // -------------------------- 选中相关 --------------------------
-        // 切换选中状态
+        // -------------------------- 批量模式 --------------------------
+        function toggleBatchMode() {
+            isBatchMode = !isBatchMode;
+            const fileList = document.getElementById('file-list');
+            const btn = document.getElementById('btn-batch-delete');
+            
+            if (isBatchMode) {
+                fileList.classList.add('show-checkbox');
+                btn.innerText = '✖ 取消批量';
+                btn.classList.add('danger');
+            } else {
+                fileList.classList.remove('show-checkbox');
+                btn.innerText = '☑ 批量删除';
+                btn.classList.remove('danger');
+                selectedItems = [];
+                renderFileList(getCurrentFileListFromDOM());
+            }
+        }
+
+        function getCurrentFileListFromDOM() {
+            return currentFileList;
+        }
+
         function toggleSelect(path, checked) {
             if (checked) {
                 if (!selectedItems.includes(path)) selectedItems.push(path);
@@ -748,30 +1041,23 @@
             updateBatchButton();
         }
 
-        // 更新批量操作按钮状态
         function updateBatchButton() {
-            const btnDelete = document.getElementById('btn-delete-batch');
             const btnPaste = document.getElementById('btn-paste');
-            
-            btnDelete.disabled = selectedItems.length === 0;
             btnPaste.disabled = clipboard.paths.length === 0;
         }
 
-        // -------------------------- 右键菜单相关 --------------------------
-        // 显示右键菜单
+        // -------------------------- 右键菜单 --------------------------
         function showContextMenu(e, path, type) {
             e.preventDefault();
             currentActiveItem = path;
             const menu = document.getElementById('context-menu');
             
-            // 根据类型显示/隐藏菜单项
             const isFolder = type === 'folder';
             document.getElementById('menu-enter').style.display = isFolder ? 'block' : 'none';
             document.getElementById('menu-preview').style.display = isFolder ? 'none' : 'block';
             document.getElementById('menu-edit').style.display = isFolder ? 'none' : 'block';
             document.getElementById('menu-download').style.display = isFolder ? 'none' : 'block';
 
-            // 定位菜单
             const x = e.clientX;
             const y = e.clientY;
             menu.style.left = `${x}px`;
@@ -779,8 +1065,7 @@
             menu.style.display = 'block';
         }
 
-        // -------------------------- 文件操作相关 --------------------------
-        // 新建文件夹
+        // -------------------------- 文件操作 --------------------------
         function openModal(id) {
             document.getElementById(id).style.display = 'flex';
             if (id === 'mkdir-modal') {
@@ -815,12 +1100,37 @@
 
                 closeModal('mkdir-modal');
                 loadFileList();
+                loadDirTree();
             } catch (e) {
                 alert('请求失败：' + e.message);
             }
         }
+        async function confirmCreateFile() {
+            const filename = document.getElementById('create-filename').value.trim();
+            if (!filename) {
+                alert('请输入文件名');
+                return;
+            }
 
-        // 文件上传
+            try {
+                const res = await fetch('/api/create_file', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ path: currentPath, filename })
+                });
+                const data = await res.json();
+                
+                if (data.code !== 0) {
+                    alert(data.msg);
+                    return;
+                }
+
+                closeModal('create-file-modal');
+                loadFileList();
+            } catch (e) {
+                alert('请求失败：' + e.message);
+            }
+        }
         async function uploadFiles(e) {
             const files = e.target.files;
             if (files.length === 0) return;
@@ -851,12 +1161,10 @@
             }
         }
 
-        // 下载文件
         function downloadFile(path) {
             window.open(`/api/download/${path}`);
         }
 
-        // 重命名
         function openRenameModal(path) {
             const name = path.split('/').pop();
             document.getElementById('rename-name').value = name;
@@ -887,12 +1195,12 @@
 
                 closeModal('rename-modal');
                 loadFileList();
+                loadDirTree();
             } catch (e) {
                 alert('请求失败：' + e.message);
             }
         }
 
-        // 删除操作
         async function deleteItem(paths) {
             if (!confirm(`确定要删除选中的${paths.length}个项目吗？此操作不可恢复！`)) return;
 
@@ -909,21 +1217,12 @@
                 }
 
                 loadFileList();
+                loadDirTree();
             } catch (e) {
                 alert('删除失败：' + e.message);
             }
         }
 
-        // 批量删除
-        function deleteBatch() {
-            if (selectedItems.length === 0) {
-                alert('请先选择要删除的项目');
-                return;
-            }
-            deleteItem(selectedItems);
-        }
-
-        // 复制/剪切
         function copyItem(paths) {
             clipboard = { type: 'copy', paths };
             updateBatchButton();
@@ -936,7 +1235,6 @@
             alert('已剪切到剪切板');
         }
 
-        // 粘贴
         async function pasteItem() {
             if (clipboard.paths.length === 0) {
                 alert('剪切板为空');
@@ -961,25 +1259,23 @@
                     alert(data.msg);
                 }
 
-                // 剪切后清空剪切板
                 if (clipboard.type === 'cut') {
                     clipboard = { type: '', paths: [] };
                 }
                 updateBatchButton();
                 loadFileList();
+                loadDirTree();
             } catch (e) {
                 alert('操作失败：' + e.message);
             }
         }
 
-        // 移动到 路径选择
         async function openPathSelectModal(type, paths) {
             clipboard = { type, paths };
             selectedTargetPath = '';
             openModal('path-select-modal');
             document.getElementById('path-select-title').innerText = type === 'move' ? '移动到' : '复制到';
             
-            // 加载目录树
             try {
                 const res = await fetch('/api/dirtree', {
                     method: 'POST',
@@ -992,28 +1288,29 @@
                     return;
                 }
 
-                renderDirTree(data.data);
+                renderPathSelectTree(data.data);
             } catch (e) {
                 alert('加载目录树失败：' + e.message);
             }
         }
 
-        // 渲染目录树
-        function renderDirTree(tree) {
-            const container = document.getElementById('dir-tree');
-            container.innerHTML = renderTreeNode(tree);
+        function renderPathSelectTree(nodes) {
+            const container = document.getElementById('path-select-tree');
+            container.innerHTML = renderPathSelectTreeToString(nodes);
         }
 
-        function renderTreeNode(nodes) {
+        function renderPathSelectTreeToString(nodes) {
             let html = '';
             nodes.forEach(node => {
                 html += `
                     <div class="tree-node">
-                        <div class="tree-node-name" data-path="${node.path}" onclick="selectTreeNode(this, '${node.path}')">
-                            📁 ${node.name}
+                        <div class="tree-node-header" data-path="${node.path}" onclick="selectPathTreeNode(this, '${node.path}')">
+                            <span class="tree-toggle" onclick="event.stopPropagation(); toggleTreeNode(this)">${node.children.length > 0 ? '▶' : ''}</span>
+                            <span>📁</span>
+                            <span>${node.name}</span>
                         </div>
                         <div class="tree-children">
-                            ${node.children.length > 0 ? renderTreeNode(node.children) : ''}
+                            ${node.children.length > 0 ? renderPathSelectTreeToString(node.children) : ''}
                         </div>
                     </div>
                 `;
@@ -1021,9 +1318,8 @@
             return html;
         }
 
-        function selectTreeNode(el, path) {
-            // 清除其他选中状态
-            document.querySelectorAll('.tree-node-name').forEach(item => {
+        function selectPathTreeNode(el, path) {
+            document.querySelectorAll('#path-select-tree .tree-node-header').forEach(item => {
                 item.classList.remove('active');
             });
             el.classList.add('active');
@@ -1056,12 +1352,12 @@
 
                 closeModal('path-select-modal');
                 loadFileList();
+                loadDirTree();
             } catch (e) {
                 alert('操作失败：' + e.message);
             }
         }
 
-        // 文本编辑器
         async function openEditor(path) {
             currentActiveItem = path;
             const fileName = path.split('/').pop();
@@ -1111,7 +1407,6 @@
             }
         }
 
-        // 文件预览
         async function openPreview(path) {
             currentActiveItem = path;
             const fileName = path.split('/').pop();
@@ -1120,64 +1415,103 @@
             openModal('preview-modal');
             const container = document.getElementById('preview-content');
 
-            // 图片预览
+            const previewExts = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg', 'mp4', 'webm', 'ogg', 'mp3', 'wav', 'aac', 'flac'];
+            
+            if (!previewExts.includes(ext)) {
+                closeModal('preview-modal');
+                openEditor(path);
+                return;
+            }
+
             if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'].includes(ext)) {
                 container.innerHTML = `<img src="/api/download/${path}" alt="${fileName}">`;
-            }
-            // 视频预览
-            else if (['mp4', 'webm', 'ogg'].includes(ext)) {
+            } else if (['mp4', 'webm', 'ogg'].includes(ext)) {
                 container.innerHTML = `<video src="/api/download/${path}" controls autoplay></video>`;
-            }
-            // 音频预览
-            else if (['mp3', 'wav', 'ogg', 'aac'].includes(ext)) {
+            } else if (['mp3', 'wav', 'ogg', 'aac', 'flac'].includes(ext)) {
                 container.innerHTML = `<audio src="/api/download/${path}" controls autoplay>`;
             }
-            // 文本文件预览
-            else if (isTextFile(ext)) {
-                try {
-                    const res = await fetch('/api/read_file', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ path })
-                    });
-                    const data = await res.json();
-                    
-                    if (data.code !== 0) {
-                        alert(data.msg);
-                        container.innerHTML = `<pre>文件读取失败：${data.msg}</pre>`;
-                        return;
-                    }
-                    container.innerHTML = `<pre>${escapeHtml(data.data)}</pre>`;
-                } catch (e) {
-                    container.innerHTML = `<pre>文件读取失败：${e.message}</pre>`;
+        }
+
+        // -------------------------- 设置相关 --------------------------
+        async function openSettings() {
+            openModal('settings-modal');
+            try {
+                const res = await fetch('/api/get_config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await res.json();
+                if (data.code === 0) {
+                    document.getElementById('settings-username').value = data.data.username;
+                    document.getElementById('settings-max-size').value = data.data.upload_max_size / (1024 * 1024);
                 }
-            }
-            // 不支持的文件类型
-            else {
-                container.innerHTML = `<div class="empty-state">该文件类型暂不支持在线预览，可点击下载查看</div>`;
+            } catch (e) {
+                alert('加载设置失败：' + e.message);
             }
         }
 
-        // HTML转义（防止XSS漏洞）
-        function escapeHtml(str) {
-            if (!str) return '';
-            return str.replace(/&/g, '&amp;')
-                      .replace(/</g, '&lt;')
-                      .replace(/>/g, '&gt;')
-                      .replace(/"/g, '&quot;')
-                      .replace(/'/g, '&#039;');
+        async function saveSettings() {
+            const username = document.getElementById('settings-username').value.trim();
+            const password = document.getElementById('settings-password').value;
+            const maxSizeMB = parseInt(document.getElementById('settings-max-size').value);
+
+            if (!username) {
+                alert('账号不能为空');
+                return;
+            }
+            if (!maxSizeMB || maxSizeMB <= 0) {
+                alert('请输入有效的文件大小');
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/save_config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username,
+                        password,
+                        upload_max_size: maxSizeMB * 1024 * 1024
+                    })
+                });
+                const data = await res.json();
+                
+                if (data.code !== 0) {
+                    alert(data.msg);
+                    return;
+                }
+
+                alert('保存成功');
+                closeModal('settings-modal');
+            } catch (e) {
+                alert('保存失败：' + e.message);
+            }
         }
 
-        // 判断是否为可编辑文本文件
+        // -------------------------- 退出登录 --------------------------
+        async function logout() {
+            if (!confirm('确定要退出登录吗？')) return;
+            try {
+                await fetch('/api/logout', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                window.location.href = '/';
+            } catch (e) {
+                alert('退出失败：' + e.message);
+            }
+        }
+
+        // -------------------------- 工具函数 --------------------------
         function isTextFile(ext) {
             const textExts = ['.txt', '.html', '.htm', '.css', '.js', '.json', '.xml', '.md', 
                               '.py', '.java', '.c', '.cpp', '.h', '.php', '.go', '.rs', 
                               '.vue', '.jsx', '.tsx', '.ts', '.sh', '.bat', '.cmd', 
-                              '.ini', '.conf', '.yml', '.yaml', '.toml', '.env', '.gitignore', '.log'];
-            return textExts.includes(ext.toLowerCase());
+                              '.ini', '.conf', '.yml', '.yaml', '.toml', '.env', '.gitignore', '.log',
+                              '.exe', '.dll', '.so', '.dylib', '.bin', '.dat']; // 未知类型也尝试文本打开
+            return true;
         }
 
-        // 根据后缀匹配文件图标
         function getFileIcon(ext) {
             ext = ext.toLowerCase();
             if (['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg'].includes(ext)) return '🖼️';
@@ -1188,7 +1522,6 @@
             if (['.doc', '.docx'].includes(ext)) return '📘';
             if (['.xls', '.xlsx'].includes(ext)) return '📗';
             if (['.ppt', '.pptx'].includes(ext)) return '📙';
-            if (isTextFile(ext)) return '📝';
             return '📄';
         }
     </script>
