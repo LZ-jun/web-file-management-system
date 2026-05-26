@@ -1,0 +1,1196 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>远程存储管理系统 | 对标蚁剑</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        :root {
+            --primary: #1890ff;
+            --success: #52c41a;
+            --warning: #faad14;
+            --danger: #ff4d4f;
+            --bg: #f0f2f5;
+            --card: #ffffff;
+            --border: #d9d9d9;
+            --text: #262626;
+            --text-secondary: #8c8c8c;
+            --hover: #f5f5f5;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* 顶部工具栏 */
+        .toolbar {
+            background: var(--card);
+            padding: 10px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .toolbar button {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            background: var(--primary);
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: background 0.2s;
+        }
+
+        .toolbar button:hover {
+            background: #096dd9;
+        }
+
+        .toolbar button.danger {
+            background: var(--danger);
+        }
+
+        .toolbar button.danger:hover {
+            background: #d9363e;
+        }
+
+        .toolbar button:disabled {
+            background: var(--text-secondary);
+            cursor: not-allowed;
+        }
+
+        /* 路径导航栏 */
+        .path-bar {
+            background: var(--card);
+            padding: 8px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .path-breadcrumb {
+            display: flex;
+            align-items: center;
+            flex: 1;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .path-item {
+            color: var(--primary);
+            cursor: pointer;
+            padding: 4px 6px;
+            border-radius: 4px;
+        }
+
+        .path-item:hover {
+            background: var(--hover);
+        }
+
+        .path-sep {
+            color: var(--text-secondary);
+        }
+
+        .path-input {
+            flex: 1;
+            max-width: 500px;
+            padding: 6px 10px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            outline: none;
+        }
+
+        .path-input:focus {
+            border-color: var(--primary);
+        }
+
+        /* 主内容区 */
+        .main-content {
+            flex: 1;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 列表表头 */
+        .table-header {
+            display: grid;
+            grid-template-columns: 40px 3fr 1fr 1fr 120px;
+            padding: 10px 20px;
+            background: var(--card);
+            border-bottom: 1px solid var(--border);
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        /* 文件列表 */
+        .file-list {
+            flex: 1;
+            overflow-y: auto;
+            background: var(--card);
+        }
+
+        .file-item {
+            display: grid;
+            grid-template-columns: 40px 3fr 1fr 1fr 120px;
+            padding: 10px 20px;
+            border-bottom: 1px solid #f0f0f0;
+            align-items: center;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .file-item:hover {
+            background: var(--hover);
+        }
+
+        .file-item.selected {
+            background: #e6f7ff;
+        }
+
+        .file-checkbox {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+
+        .file-name {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .file-icon {
+            font-size: 18px;
+        }
+
+        .file-size, .file-mtime {
+            color: var(--text-secondary);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .file-actions {
+            display: flex;
+            gap: 5px;
+            justify-content: flex-end;
+        }
+
+        .file-actions button {
+            padding: 3px 8px;
+            border: none;
+            border-radius: 3px;
+            background: var(--primary);
+            color: white;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .file-actions button.danger {
+            background: var(--danger);
+        }
+
+        /* 右键菜单 */
+        #context-menu {
+            position: fixed;
+            width: 180px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 9999;
+            display: none;
+        }
+
+        .menu-item {
+            padding: 8px 15px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .menu-item:hover {
+            background: var(--hover);
+        }
+
+        .menu-item.danger {
+            color: var(--danger);
+        }
+
+        .menu-separator {
+            height: 1px;
+            background: var(--border);
+            margin: 3px 0;
+        }
+
+        /* 模态框通用样式 */
+        .modal-mask {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            display: none;
+        }
+
+        .modal-box {
+            background: var(--card);
+            border-radius: 8px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 500;
+        }
+
+        .modal-close {
+            cursor: pointer;
+            color: var(--text-secondary);
+            font-size: 20px;
+        }
+
+        .modal-body {
+            padding: 20px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .modal-footer {
+            padding: 10px 20px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .modal-footer button {
+            padding: 6px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .btn-cancel {
+            background: #f5f5f5;
+            color: var(--text);
+        }
+
+        .btn-confirm {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .form-item {
+            margin-bottom: 15px;
+        }
+
+        .form-item label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        .form-item input, .form-item textarea {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            outline: none;
+        }
+
+        .form-item input:focus, .form-item textarea:focus {
+            border-color: var(--primary);
+        }
+
+        /* 文本编辑器模态框 */
+        #editor-modal .modal-box {
+            max-width: 1000px;
+            height: 80vh;
+        }
+
+        #file-editor {
+            width: 100%;
+            height: 100%;
+            min-height: 500px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            line-height: 1.5;
+            resize: none;
+        }
+
+        /* 预览模态框 */
+        #preview-modal .modal-box {
+            max-width: 90vw;
+            max-height: 90vh;
+        }
+
+        .preview-content {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            max-width: 100%;
+            max-height: 70vh;
+            overflow: auto;
+        }
+
+        .preview-content img {
+            max-width: 100%;
+            max-height: 70vh;
+        }
+
+        .preview-content video, .preview-content audio {
+            max-width: 100%;
+        }
+
+        .preview-content pre {
+            width: 100%;
+            padding: 15px;
+            background: #f6f8fa;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-family: 'Consolas', monospace;
+        }
+
+        /* 目录树样式 */
+        .dir-tree {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .tree-node {
+            margin: 5px 0;
+        }
+
+        .tree-node-name {
+            padding: 5px 8px;
+            cursor: pointer;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .tree-node-name:hover, .tree-node-name.active {
+            background: var(--hover);
+        }
+
+        .tree-children {
+            margin-left: 20px;
+        }
+
+        /* 上传文件输入框 */
+        #file-input {
+            display: none;
+        }
+
+        /* 空状态 */
+        .empty-state {
+            padding: 50px;
+            text-align: center;
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+    <!-- 顶部工具栏 -->
+    <div class="toolbar">
+        <button id="btn-back">⬅ 返回上一级</button>
+        <button id="btn-mkdir">📁 新建文件夹</button>
+        <label for="file-input">
+            <button type="button">📤 上传文件</button>
+        </label>
+        <input type="file" id="file-input" multiple>
+        <button id="btn-paste" disabled>📋 粘贴</button>
+        <button id="btn-delete-batch" class="danger" disabled>🗑 批量删除</button>
+    </div>
+
+    <!-- 路径导航栏 -->
+    <div class="path-bar">
+        <div class="path-breadcrumb" id="path-breadcrumb"></div>
+        <input type="text" class="path-input" id="path-input" placeholder="输入路径回车跳转">
+        <button id="btn-jump">跳转</button>
+    </div>
+
+    <!-- 主内容区 -->
+    <div class="main-content">
+        <div class="table-header">
+            <div></div>
+            <div>文件名</div>
+            <div>大小</div>
+            <div>修改时间</div>
+            <div>操作</div>
+        </div>
+        <div class="file-list" id="file-list"></div>
+    </div>
+
+    <!-- 右键菜单 -->
+    <div id="context-menu">
+        <div class="menu-item" id="menu-enter">📂 进入文件夹</div>
+        <div class="menu-item" id="menu-preview">👁 预览</div>
+        <div class="menu-item" id="menu-edit">📝 编辑</div>
+        <div class="menu-item" id="menu-download">⬇ 下载</div>
+        <div class="menu-separator"></div>
+        <div class="menu-item" id="menu-copy">📋 复制</div>
+        <div class="menu-item" id="menu-cut">✂ 剪切</div>
+        <div class="menu-item" id="menu-rename">📛 重命名</div>
+        <div class="menu-item" id="menu-move">📦 移动到</div>
+        <div class="menu-separator"></div>
+        <div class="menu-item danger" id="menu-delete">🗑 删除</div>
+    </div>
+
+    <!-- 新建文件夹模态框 -->
+    <div class="modal-mask" id="mkdir-modal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <span>新建文件夹</span>
+                <span class="modal-close" onclick="closeModal('mkdir-modal')">×</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-item">
+                    <label>文件夹名称</label>
+                    <input type="text" id="mkdir-name" placeholder="请输入文件夹名称">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closeModal('mkdir-modal')">取消</button>
+                <button class="btn-confirm" onclick="confirmMkdir()">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 重命名模态框 -->
+    <div class="modal-mask" id="rename-modal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <span>重命名</span>
+                <span class="modal-close" onclick="closeModal('rename-modal')">×</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-item">
+                    <label>新名称</label>
+                    <input type="text" id="rename-name" placeholder="请输入新名称">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closeModal('rename-modal')">取消</button>
+                <button class="btn-confirm" onclick="confirmRename()">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 移动/复制 路径选择模态框 -->
+    <div class="modal-mask" id="path-select-modal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <span id="path-select-title">选择目标路径</span>
+                <span class="modal-close" onclick="closeModal('path-select-modal')">×</span>
+            </div>
+            <div class="modal-body">
+                <div class="dir-tree" id="dir-tree"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closeModal('path-select-modal')">取消</button>
+                <button class="btn-confirm" onclick="confirmPathSelect()">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 文本编辑器模态框 -->
+    <div class="modal-mask" id="editor-modal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <span id="editor-title">文件编辑</span>
+                <span class="modal-close" onclick="closeModal('editor-modal')">×</span>
+            </div>
+            <div class="modal-body">
+                <textarea id="file-editor"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closeModal('editor-modal')">取消</button>
+                <button class="btn-confirm" onclick="saveFileContent()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 预览模态框 -->
+    <div class="modal-mask" id="preview-modal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <span id="preview-title">文件预览</span>
+                <span class="modal-close" onclick="closeModal('preview-modal')">×</span>
+            </div>
+            <div class="modal-body">
+                <div class="preview-content" id="preview-content"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 全局变量
+        let currentPath = ''; // 当前所在路径（相对根目录）
+        let selectedItems = []; // 选中的文件/文件夹
+        let clipboard = { type: '', paths: [] }; // 剪切板：type=copy/cut
+        let currentActiveItem = ''; // 当前右键选中的项目
+        let selectedTargetPath = ''; // 移动/复制选择的目标路径
+
+        // 页面加载完成后初始化
+        window.onload = function() {
+            loadFileList();
+            bindEvents();
+        }
+
+        // -------------------------- 核心事件绑定 --------------------------
+        function bindEvents() {
+            // 返回上一级
+            document.getElementById('btn-back').onclick = goBack;
+            // 新建文件夹
+            document.getElementById('btn-mkdir').onclick = () => openModal('mkdir-modal');
+            // 文件上传
+            document.getElementById('file-input').onchange = uploadFiles;
+            // 粘贴
+            document.getElementById('btn-paste').onclick = pasteItem;
+            // 批量删除
+            document.getElementById('btn-delete-batch').onclick = deleteBatch;
+            // 路径跳转
+            document.getElementById('btn-jump').onclick = jumpToPath;
+            document.getElementById('path-input').onkeydown = (e) => e.key === 'Enter' && jumpToPath();
+
+            // 右键菜单事件
+            bindContextMenuEvents();
+
+            // 点击空白处关闭右键菜单
+            document.onclick = () => document.getElementById('context-menu').style.display = 'none';
+            // 窗口大小改变关闭右键菜单
+            window.onresize = () => document.getElementById('context-menu').style.display = 'none';
+        }
+
+        // 右键菜单事件绑定
+        function bindContextMenuEvents() {
+            const menu = document.getElementById('context-menu');
+            document.getElementById('menu-enter').onclick = () => enterFolder(currentActiveItem);
+            document.getElementById('menu-preview').onclick = () => openPreview(currentActiveItem);
+            document.getElementById('menu-edit').onclick = () => openEditor(currentActiveItem);
+            document.getElementById('menu-download').onclick = () => downloadFile(currentActiveItem);
+            document.getElementById('menu-copy').onclick = () => copyItem([currentActiveItem]);
+            document.getElementById('menu-cut').onclick = () => cutItem([currentActiveItem]);
+            document.getElementById('menu-rename').onclick = () => openRenameModal(currentActiveItem);
+            document.getElementById('menu-move').onclick = () => openPathSelectModal('move', [currentActiveItem]);
+            document.getElementById('menu-delete').onclick = () => deleteItem([currentActiveItem]);
+        }
+
+        // -------------------------- 核心接口请求 --------------------------
+        // 加载文件列表
+        async function loadFileList() {
+            try {
+                const res = await fetch('/api/list', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ path: currentPath })
+                });
+                const data = await res.json();
+                
+                if (data.code !== 0) {
+                    alert(data.msg);
+                    document.getElementById('file-list').innerHTML = `<div class="empty-state">${data.msg}</div>`;
+                    return;
+                }
+
+                renderFileList(data.data);
+                renderBreadcrumb();
+                // 清空选中状态
+                selectedItems = [];
+                updateBatchButton();
+            } catch (e) {
+                alert('请求失败：' + e.message);
+            }
+        }
+
+        // 渲染文件列表
+        function renderFileList(list) {
+            const container = document.getElementById('file-list');
+            if (list.length === 0) {
+                container.innerHTML = '<div class="empty-state">当前文件夹为空</div>';
+                return;
+            }
+
+            let html = '';
+            list.forEach(item => {
+                const fullPath = currentPath ? `${currentPath}/${item.name}` : item.name;
+                const isFolder = item.type === 'folder';
+                const isSelected = selectedItems.includes(fullPath);
+
+                html += `
+                    <div class="file-item ${isSelected ? 'selected' : ''}" 
+                         data-path="${fullPath}" 
+                         data-type="${item.type}"
+                         ondblclick="${isFolder ? `enterFolder('${item.name}')` : `openPreview('${fullPath}')`}"
+                         oncontextmenu="showContextMenu(event, '${fullPath}', '${item.type}')">
+                        <div>
+                            <input type="checkbox" class="file-checkbox" 
+                                   ${isSelected ? 'checked' : ''} 
+                                   onchange="toggleSelect('${fullPath}', this.checked)">
+                        </div>
+                        <div class="file-name">
+                            <span class="file-icon">${isFolder ? '📁' : getFileIcon(item.ext)}</span>
+                            <span>${item.name}</span>
+                        </div>
+                        <div class="file-size">${item.size_format}</div>
+                        <div class="file-mtime">${item.mtime}</div>
+                        <div class="file-actions">
+                            ${isFolder ? `<button onclick="enterFolder('${item.name}')">进入</button>` : ''}
+                            ${!isFolder ? `<button onclick="openPreview('${fullPath}')">预览</button>` : ''}
+                            ${!isFolder && isTextFile(item.ext) ? `<button onclick="openEditor('${fullPath}')">编辑</button>` : ''}
+                            <button onclick="downloadFile('${fullPath}')">下载</button>
+                            <button class="danger" onclick="deleteItem(['${fullPath}'])">删除</button>
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        // 渲染面包屑导航
+        function renderBreadcrumb() {
+            const container = document.getElementById('path-breadcrumb');
+            const paths = currentPath ? currentPath.split('/') : [];
+            
+            let html = `<span class="path-item" onclick="jumpToRoot()">根目录</span>`;
+            let current = '';
+            
+            paths.forEach((path, index) => {
+                current += (index === 0 ? '' : '/') + path;
+                html += `
+                    <span class="path-sep">/</span>
+                    <span class="path-item" onclick="jumpToPath('${current}')">${path}</span>
+                `;
+            });
+            
+            container.innerHTML = html;
+            document.getElementById('path-input').value = '/' + currentPath;
+        }
+
+        // -------------------------- 路径导航相关 --------------------------
+        // 进入文件夹
+        function enterFolder(name) {
+            currentPath = currentPath ? `${currentPath}/${name}` : name;
+            loadFileList();
+        }
+
+        // 返回上一级
+        function goBack() {
+            if (!currentPath) return;
+            const paths = currentPath.split('/');
+            paths.pop();
+            currentPath = paths.join('/');
+            loadFileList();
+        }
+
+        // 跳转到根目录
+        function jumpToRoot() {
+            currentPath = '';
+            loadFileList();
+        }
+
+        // 跳转到指定路径
+        function jumpToPath(path = null) {
+            const targetPath = path !== null ? path : document.getElementById('path-input').value.trim().replace(/^\/+/, '');
+            currentPath = targetPath;
+            loadFileList();
+        }
+
+        // -------------------------- 选中相关 --------------------------
+        // 切换选中状态
+        function toggleSelect(path, checked) {
+            if (checked) {
+                if (!selectedItems.includes(path)) selectedItems.push(path);
+            } else {
+                selectedItems = selectedItems.filter(item => item !== path);
+            }
+            updateBatchButton();
+        }
+
+        // 更新批量操作按钮状态
+        function updateBatchButton() {
+            const btnDelete = document.getElementById('btn-delete-batch');
+            const btnPaste = document.getElementById('btn-paste');
+            
+            btnDelete.disabled = selectedItems.length === 0;
+            btnPaste.disabled = clipboard.paths.length === 0;
+        }
+
+        // -------------------------- 右键菜单相关 --------------------------
+        // 显示右键菜单
+        function showContextMenu(e, path, type) {
+            e.preventDefault();
+            currentActiveItem = path;
+            const menu = document.getElementById('context-menu');
+            
+            // 根据类型显示/隐藏菜单项
+            const isFolder = type === 'folder';
+            document.getElementById('menu-enter').style.display = isFolder ? 'block' : 'none';
+            document.getElementById('menu-preview').style.display = isFolder ? 'none' : 'block';
+            document.getElementById('menu-edit').style.display = isFolder ? 'none' : 'block';
+            document.getElementById('menu-download').style.display = isFolder ? 'none' : 'block';
+
+            // 定位菜单
+            const x = e.clientX;
+            const y = e.clientY;
+            menu.style.left = `${x}px`;
+            menu.style.top = `${y}px`;
+            menu.style.display = 'block';
+        }
+
+        // -------------------------- 文件操作相关 --------------------------
+        // 新建文件夹
+        function openModal(id) {
+            document.getElementById(id).style.display = 'flex';
+            if (id === 'mkdir-modal') {
+                document.getElementById('mkdir-name').value = '';
+                document.getElementById('mkdir-name').focus();
+            }
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).style.display = 'none';
+        }
+
+        async function confirmMkdir() {
+            const name = document.getElementById('mkdir-name').value.trim();
+            if (!name) {
+                alert('请输入文件夹名称');
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/mkdir', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ path: currentPath, name })
+                });
+                const data = await res.json();
+                
+                if (data.code !== 0) {
+                    alert(data.msg);
+                    return;
+                }
+
+                closeModal('mkdir-modal');
+                loadFileList();
+            } catch (e) {
+                alert('请求失败：' + e.message);
+            }
+        }
+
+        // 文件上传
+        async function uploadFiles(e) {
+            const files = e.target.files;
+            if (files.length === 0) return;
+
+            const formData = new FormData();
+            for (let i = 0; i < files.length; i++) {
+                formData.append('files', files[i]);
+            }
+            formData.append('path', currentPath);
+
+            try {
+                const res = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+                
+                if (data.fail && data.fail.length > 0) {
+                    alert(`部分文件上传失败：\n${data.fail.join('\n')}`);
+                } else {
+                    alert(data.msg);
+                }
+
+                document.getElementById('file-input').value = '';
+                loadFileList();
+            } catch (e) {
+                alert('上传失败：' + e.message);
+            }
+        }
+
+        // 下载文件
+        function downloadFile(path) {
+            window.open(`/api/download/${path}`);
+        }
+
+        // 重命名
+        function openRenameModal(path) {
+            const name = path.split('/').pop();
+            document.getElementById('rename-name').value = name;
+            document.getElementById('rename-name').focus();
+            currentActiveItem = path;
+            openModal('rename-modal');
+        }
+
+        async function confirmRename() {
+            const newName = document.getElementById('rename-name').value.trim();
+            if (!newName) {
+                alert('请输入新名称');
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/rename', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ path: currentActiveItem, new_name: newName })
+                });
+                const data = await res.json();
+                
+                if (data.code !== 0) {
+                    alert(data.msg);
+                    return;
+                }
+
+                closeModal('rename-modal');
+                loadFileList();
+            } catch (e) {
+                alert('请求失败：' + e.message);
+            }
+        }
+
+        // 删除操作
+        async function deleteItem(paths) {
+            if (!confirm(`确定要删除选中的${paths.length}个项目吗？此操作不可恢复！`)) return;
+
+            try {
+                const res = await fetch('/api/delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ paths })
+                });
+                const data = await res.json();
+                
+                if (data.fail && data.fail.length > 0) {
+                    alert(`部分项目删除失败：\n${data.fail.join('\n')}`);
+                }
+
+                loadFileList();
+            } catch (e) {
+                alert('删除失败：' + e.message);
+            }
+        }
+
+        // 批量删除
+        function deleteBatch() {
+            if (selectedItems.length === 0) {
+                alert('请先选择要删除的项目');
+                return;
+            }
+            deleteItem(selectedItems);
+        }
+
+        // 复制/剪切
+        function copyItem(paths) {
+            clipboard = { type: 'copy', paths };
+            updateBatchButton();
+            alert('已复制到剪切板');
+        }
+
+        function cutItem(paths) {
+            clipboard = { type: 'cut', paths };
+            updateBatchButton();
+            alert('已剪切到剪切板');
+        }
+
+        // 粘贴
+        async function pasteItem() {
+            if (clipboard.paths.length === 0) {
+                alert('剪切板为空');
+                return;
+            }
+
+            const url = clipboard.type === 'copy' ? '/api/copy' : '/api/move';
+            try {
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        source_paths: clipboard.paths,
+                        target_path: currentPath
+                    })
+                });
+                const data = await res.json();
+                
+                if (data.fail && data.fail.length > 0) {
+                    alert(`部分操作失败：\n${data.fail.join('\n')}`);
+                } else {
+                    alert(data.msg);
+                }
+
+                // 剪切后清空剪切板
+                if (clipboard.type === 'cut') {
+                    clipboard = { type: '', paths: [] };
+                }
+                updateBatchButton();
+                loadFileList();
+            } catch (e) {
+                alert('操作失败：' + e.message);
+            }
+        }
+
+        // 移动到 路径选择
+        async function openPathSelectModal(type, paths) {
+            clipboard = { type, paths };
+            selectedTargetPath = '';
+            openModal('path-select-modal');
+            document.getElementById('path-select-title').innerText = type === 'move' ? '移动到' : '复制到';
+            
+            // 加载目录树
+            try {
+                const res = await fetch('/api/dirtree', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await res.json();
+                
+                if (data.code !== 0) {
+                    alert(data.msg);
+                    return;
+                }
+
+                renderDirTree(data.data);
+            } catch (e) {
+                alert('加载目录树失败：' + e.message);
+            }
+        }
+
+        // 渲染目录树
+        function renderDirTree(tree) {
+            const container = document.getElementById('dir-tree');
+            container.innerHTML = renderTreeNode(tree);
+        }
+
+        function renderTreeNode(nodes) {
+            let html = '';
+            nodes.forEach(node => {
+                html += `
+                    <div class="tree-node">
+                        <div class="tree-node-name" data-path="${node.path}" onclick="selectTreeNode(this, '${node.path}')">
+                            📁 ${node.name}
+                        </div>
+                        <div class="tree-children">
+                            ${node.children.length > 0 ? renderTreeNode(node.children) : ''}
+                        </div>
+                    </div>
+                `;
+            });
+            return html;
+        }
+
+        function selectTreeNode(el, path) {
+            // 清除其他选中状态
+            document.querySelectorAll('.tree-node-name').forEach(item => {
+                item.classList.remove('active');
+            });
+            el.classList.add('active');
+            selectedTargetPath = path;
+        }
+
+        async function confirmPathSelect() {
+            if (!selectedTargetPath) {
+                alert('请选择目标路径');
+                return;
+            }
+
+            const url = clipboard.type === 'copy' ? '/api/copy' : '/api/move';
+            try {
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        source_paths: clipboard.paths,
+                        target_path: selectedTargetPath
+                    })
+                });
+                const data = await res.json();
+                
+                if (data.fail && data.fail.length > 0) {
+                    alert(`部分操作失败：\n${data.fail.join('\n')}`);
+                } else {
+                    alert(data.msg);
+                }
+
+                closeModal('path-select-modal');
+                loadFileList();
+            } catch (e) {
+                alert('操作失败：' + e.message);
+            }
+        }
+
+        // 文本编辑器
+        async function openEditor(path) {
+            currentActiveItem = path;
+            const fileName = path.split('/').pop();
+            document.getElementById('editor-title').innerText = `编辑：${fileName}`;
+            openModal('editor-modal');
+
+            try {
+                const res = await fetch('/api/read_file', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ path })
+                });
+                const data = await res.json();
+                
+                if (data.code !== 0) {
+                    alert(data.msg);
+                    closeModal('editor-modal');
+                    return;
+                }
+
+                document.getElementById('file-editor').value = data.data;
+            } catch (e) {
+                alert('读取文件失败：' + e.message);
+                closeModal('editor-modal');
+            }
+        }
+
+        async function saveFileContent() {
+            const content = document.getElementById('file-editor').value;
+            try {
+                const res = await fetch('/api/save_file', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ path: currentActiveItem, content })
+                });
+                const data = await res.json();
+                
+                if (data.code !== 0) {
+                    alert(data.msg);
+                    return;
+                }
+
+                alert('保存成功');
+                closeModal('editor-modal');
+            } catch (e) {
+                alert('保存失败：' + e.message);
+            }
+        }
+
+        // 文件预览
+        async function openPreview(path) {
+            currentActiveItem = path;
+            const fileName = path.split('/').pop();
+            const ext = fileName.split('.').pop().toLowerCase();
+            document.getElementById('preview-title').innerText = `预览：${fileName}`;
+            openModal('preview-modal');
+            const container = document.getElementById('preview-content');
+
+            // 图片预览
+            if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'].includes(ext)) {
+                container.innerHTML = `<img src="/api/download/${path}" alt="${fileName}">`;
+            }
+            // 视频预览
+            else if (['mp4', 'webm', 'ogg'].includes(ext)) {
+                container.innerHTML = `<video src="/api/download/${path}" controls autoplay></video>`;
+            }
+            // 音频预览
+            else if (['mp3', 'wav', 'ogg', 'aac'].includes(ext)) {
+                container.innerHTML = `<audio src="/api/download/${path}" controls autoplay>`;
+            }
+            // 文本文件预览
+            else if (isTextFile(ext)) {
+                try {
+                    const res = await fetch('/api/read_file', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ path })
+                    });
+                    const data = await res.json();
+                    
+                    if (data.code !== 0) {
+                        alert(data.msg);
+                        container.innerHTML = `<pre>文件读取失败：${data.msg}</pre>`;
+                        return;
+                    }
+                    container.innerHTML = `<pre>${escapeHtml(data.data)}</pre>`;
+                } catch (e) {
+                    container.innerHTML = `<pre>文件读取失败：${e.message}</pre>`;
+                }
+            }
+            // 不支持的文件类型
+            else {
+                container.innerHTML = `<div class="empty-state">该文件类型暂不支持在线预览，可点击下载查看</div>`;
+            }
+        }
+
+        // HTML转义（防止XSS漏洞）
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/&/g, '&amp;')
+                      .replace(/</g, '&lt;')
+                      .replace(/>/g, '&gt;')
+                      .replace(/"/g, '&quot;')
+                      .replace(/'/g, '&#039;');
+        }
+
+        // 判断是否为可编辑文本文件
+        function isTextFile(ext) {
+            const textExts = ['.txt', '.html', '.htm', '.css', '.js', '.json', '.xml', '.md', 
+                              '.py', '.java', '.c', '.cpp', '.h', '.php', '.go', '.rs', 
+                              '.vue', '.jsx', '.tsx', '.ts', '.sh', '.bat', '.cmd', 
+                              '.ini', '.conf', '.yml', '.yaml', '.toml', '.env', '.gitignore', '.log'];
+            return textExts.includes(ext.toLowerCase());
+        }
+
+        // 根据后缀匹配文件图标
+        function getFileIcon(ext) {
+            ext = ext.toLowerCase();
+            if (['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg'].includes(ext)) return '🖼️';
+            if (['.mp4', '.webm', '.ogg', '.avi', '.mkv', '.mov'].includes(ext)) return '🎬';
+            if (['.mp3', '.wav', '.ogg', '.aac', '.flac'].includes(ext)) return '🎵';
+            if (['.zip', '.rar', '.7z', '.tar', '.gz', '.bz2'].includes(ext)) return '📦';
+            if (['.pdf'].includes(ext)) return '📕';
+            if (['.doc', '.docx'].includes(ext)) return '📘';
+            if (['.xls', '.xlsx'].includes(ext)) return '📗';
+            if (['.ppt', '.pptx'].includes(ext)) return '📙';
+            if (isTextFile(ext)) return '📝';
+            return '📄';
+        }
+    </script>
+</body>
+</html>

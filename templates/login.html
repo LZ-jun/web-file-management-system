@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登录 - 远程存储管理系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        body {
+            background: #f0f2f5;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .login-box {
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+        .login-title {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 24px;
+            font-weight: 500;
+            color: #333;
+        }
+        .form-item {
+            margin-bottom: 20px;
+        }
+        .form-item label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #666;
+        }
+        .form-item input {
+            width: 100%;
+            padding: 10px 15px;
+            border: 1px solid #d9d9d9;
+            border-radius: 4px;
+            outline: none;
+            font-size: 14px;
+        }
+        .form-item input:focus {
+            border-color: #1890ff;
+        }
+        .login-btn {
+            width: 100%;
+            padding: 12px;
+            background: #1890ff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .login-btn:hover {
+            background: #096dd9;
+        }
+        .login-btn:disabled {
+            background: #8c8c8c;
+            cursor: not-allowed;
+        }
+        .error-msg {
+            color: #ff4d4f;
+            text-align: center;
+            margin-bottom: 15px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-box">
+        <div class="login-title">远程存储管理系统</div>
+        <div class="error-msg" id="error-msg">账号或密码错误</div>
+        <div class="form-item">
+            <label>账号</label>
+            <input type="text" id="username" placeholder="请输入账号">
+        </div>
+        <div class="form-item">
+            <label>密码</label>
+            <input type="password" id="password" placeholder="请输入密码" onkeydown="if(event.key==='Enter') login()">
+        </div>
+        <button class="login-btn" id="login-btn" onclick="login()">登录</button>
+    </div>
+
+    <script>
+        // SHA256 哈希函数（浏览器原生实现）
+        async function sha256(text) {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(text);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+            return hashHex;
+        }
+
+        async function login() {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            const errorMsg = document.getElementById('error-msg');
+            const loginBtn = document.getElementById('login-btn');
+
+            if (!username || !password) {
+                errorMsg.innerText = '请输入账号和密码';
+                errorMsg.style.display = 'block';
+                return;
+            }
+
+            // 禁用按钮，防止重复点击
+            loginBtn.disabled = true;
+            loginBtn.innerText = '登录中...';
+            errorMsg.style.display = 'none';
+
+            try {
+                // 1. 先获取挑战值（salt + timestamp）
+                const challengeRes = await fetch('/api/get_challenge', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const challengeData = await challengeRes.json();
+
+                if (challengeData.code !== 0) {
+                    errorMsg.innerText = '获取挑战值失败：' + challengeData.msg;
+                    errorMsg.style.display = 'block';
+                    loginBtn.disabled = false;
+                    loginBtn.innerText = '登录';
+                    return;
+                }
+
+                const { salt, timestamp } = challengeData.data;
+
+                // 2. 按照要求计算哈希：hash( hash(password) + salt + str(timestamp) )
+                const passwordHash = await sha256(password);
+                const finalHash = await sha256(passwordHash + salt + timestamp.toString());
+
+                // 3. 发送给后端验证
+                const loginRes = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username,
+                        password_hash: finalHash  // 只传这两个
+                    })
+                });
+                const loginData = await loginRes.json();
+
+                if (loginData.code !== 0) {
+                    errorMsg.innerText = loginData.msg;
+                    errorMsg.style.display = 'block';
+                    loginBtn.disabled = false;
+                    loginBtn.innerText = '登录';
+                    return;
+                }
+
+                // 登录成功，跳转主页
+                window.location.href = '/';
+            } catch (e) {
+                errorMsg.innerText = '请求失败：' + e.message;
+                errorMsg.style.display = 'block';
+                loginBtn.disabled = false;
+                loginBtn.innerText = '登录';
+            }
+        }
+    </script>
+</body>
+</html>
