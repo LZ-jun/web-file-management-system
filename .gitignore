@@ -1,0 +1,19 @@
+# 配置文件
+config.json
+shares.json
+# 上传文件夹
+uploads/
+
+# 备份文件
+*.backup
+
+# Python
+__pycache__/
+*.pyc
+
+# IDE
+.vscode/
+.idea/
+
+# .gitignore
+

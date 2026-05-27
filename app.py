@@ -12,7 +12,7 @@ from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
-app.config['PERMANENT_SESSION_LIFETIME'] = 300  # 5分钟 = 300秒
+app.config['PERMANENT_SESSION_LIFETIME'] = 1800  # 30分钟 = 1800秒
 app.config['SESSION_COOKIE_HTTPONLY'] = True      # 禁止JS读Cookie，防XSS
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'     # 防CSRF
 app.secret_key = os.urandom(24)  # 用于加密Cookie
@@ -28,8 +28,27 @@ DEFAULT_CONFIG = {
     'upload_max_size': 1024 * 1024 * 1024,
     'username': 'admin',
     'password': get_sha256('admin123'),  # 固定字段名：password
-    'base_upload_folder': os.path.abspath('uploads')
+    'base_upload_folder': os.path.abspath('uploads'),
+    'share_expire_minutes': 30  # 默认分享有效期30分钟
 }
+
+# 分享链接存储
+SHARES_FILE = 'shares.json'
+
+def load_shares():
+    if not os.path.exists(SHARES_FILE):
+        return {}
+    try:
+        with open(SHARES_FILE, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except:
+        return {}
+
+def save_shares(shares_data):
+    with open(SHARES_FILE, 'w', encoding='utf-8') as f:
+        json.dump(shares_data, f, ensure_ascii=False, indent=2)
+
+shares = load_shares()
 
 def load_config():
     if not os.path.exists(CONFIG_FILE):
@@ -166,32 +185,12 @@ def get_config():
         'code': 0,
         'data': {
             'upload_max_size': config['upload_max_size'],
-            'username': config['username']
+            'username': config['username'],
+            'share_expire_minutes': config.get('share_expire_minutes', 30)
         }
     })
 
-@app.route('/api/save_config', methods=['POST'])
-@login_required
-def save_config_api():
-    global config, BASE_UPLOAD_FOLDER
-    data = request.json
-    
-    new_config = config.copy()
-    if 'upload_max_size' in data:
-        new_config['upload_max_size'] = data['upload_max_size']
-    if 'username' in data:
-        new_config['username'] = data['username']
-    if 'password' in data and data['password']:
-        # 新逻辑：直接存 SHA256 哈希
-        import hashlib
-        new_config['password'] = hashlib.sha256(data['password'].encode('utf-8')).hexdigest()
-    
-    save_config(new_config)
-    config = new_config
-    BASE_UPLOAD_FOLDER = config['base_upload_folder']
-    app.config['MAX_CONTENT_LENGTH'] = config['upload_max_size']
-    
-    return jsonify({'code': 0, 'msg': '保存成功'})
+
 
 # -------------------------- 核心文件管理接口（全加@login_required） --------------------------
 @app.route('/api/list', methods=['POST'])
@@ -531,6 +530,103 @@ def create_file():
         return jsonify({'code': 0, 'msg': '创建成功'})
     except Exception as e:
         return jsonify({'code': -1, 'msg': f'创建失败：{str(e)}'}), 500
+
+# -------------------------- 分享功能 --------------------------
+@app.route('/api/create_share', methods=['POST'])
+@login_required
+def create_share():
+    global shares
+    user_path = request.json.get('path', '')
+    full_path = get_safe_path(user_path)
+    
+    if full_path is None or not os.path.exists(full_path):
+        return jsonify({'code': -1, 'msg': '文件不存在或路径非法'}), 404
+    
+    if os.path.isdir(full_path):
+        return jsonify({'code': -1, 'msg': '暂不支持分享文件夹'}), 400
+    
+    # 生成唯一分享 ID
+    share_id = secrets.token_urlsafe(16)
+    current_time = int(time.time())
+    
+    # 获取分享有效期配置
+    expire_minutes = config.get('share_expire_minutes', 30)
+    expire_time = None if expire_minutes == 0 else current_time + (expire_minutes * 60)
+    
+    shares[share_id] = {
+        'path': user_path,
+        'filename': os.path.basename(full_path),
+        'created_at': current_time,
+        'expire_at': expire_time  # None 表示永久
+    }
+    save_shares(shares)
+    
+    return jsonify({'code': 0, 'data': {'share_id': share_id, 'msg': '分享创建成功'}})
+
+@app.route('/share/<share_id>')
+def access_share(share_id):
+    global shares
+    share = shares.get(share_id)
+    if not share:
+        return render_template('share.html', error='分享链接无效或已过期')
+    
+    # 检查过期
+    if share.get('expire_at') is not None and int(time.time()) > share['expire_at']:
+        del shares[share_id]
+        save_shares(shares)
+        return render_template('share.html', error='分享链接已过期')
+    
+    # 检查文件是否还存在
+    full_path = get_safe_path(share['path'])
+    if full_path is None or not os.path.exists(full_path):
+        return render_template('share.html', error='分享的文件已不存在')
+    
+    return render_template('share.html', share=share, share_id=share_id)
+
+@app.route('/share/download/<share_id>')
+def download_share(share_id):
+    global shares
+    share = shares.get(share_id)
+    if not share:
+        return '分享链接无效或已过期', 404
+    
+    # 检查过期
+    if share.get('expire_at') is not None and int(time.time()) > share['expire_at']:
+        del shares[share_id]
+        save_shares(shares)
+        return '分享链接已过期', 404
+    
+    full_path = get_safe_path(share['path'])
+    if full_path is None or not os.path.exists(full_path):
+        return '分享的文件已不存在', 404
+    
+    directory, filename = os.path.split(full_path)
+    return send_from_directory(directory, filename, as_attachment=True)
+
+# 更新配置 API 中包含分享有效期
+@app.route('/api/save_config', methods=['POST'])
+@login_required
+def save_config_api():
+    global config, BASE_UPLOAD_FOLDER
+    data = request.json
+    
+    new_config = config.copy()
+    if 'upload_max_size' in data:
+        new_config['upload_max_size'] = data['upload_max_size']
+    if 'username' in data:
+        new_config['username'] = data['username']
+    if 'password' in data and data['password']:
+        import hashlib
+        new_config['password'] = hashlib.sha256(data['password'].encode('utf-8')).hexdigest()
+    if 'share_expire_minutes' in data:
+        new_config['share_expire_minutes'] = data['share_expire_minutes']
+    
+    save_config(new_config)
+    config = new_config
+    BASE_UPLOAD_FOLDER = config['base_upload_folder']
+    app.config['MAX_CONTENT_LENGTH'] = config['upload_max_size']
+    
+    return jsonify({'code': 0, 'msg': '保存成功'})
 
 def get_free_port():
     """获取一个可用的随机端口"""

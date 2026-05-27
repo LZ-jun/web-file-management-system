@@ -630,6 +630,8 @@
     <!-- 更多按钮下拉菜单 -->
     <div id="more-menu">
         <div class="menu-item" onclick="moreMenuAction('download')">⬇ 下载</div>
+        <div class="menu-item" onclick="moreMenuAction('share')">🔗 分享</div>
+        <div class="menu-separator"></div>
         <div class="menu-item" onclick="moreMenuAction('copy')">📋 复制</div>
         <div class="menu-item" onclick="moreMenuAction('cut')">✂ 剪切</div>
         <div class="menu-item" onclick="moreMenuAction('rename')">📛 重命名</div>
@@ -638,6 +640,27 @@
         <div class="menu-item" onclick="moreMenuAction('attr')">📋 属性</div>
         <div class="menu-separator"></div>
         <div class="menu-item danger" onclick="moreMenuAction('delete')">🗑 删除</div>
+    </div>
+    
+    <!-- 分享链接模态框 -->
+    <div class="modal-mask" id="share-modal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <span>文件分享</span>
+                <span class="modal-close" onclick="closeModal('share-modal')">×</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-item">
+                    <label>分享链接</label>
+                    <input type="text" id="share-link" readonly style="cursor: pointer; background: #f5f5f5;">
+                </div>
+                <p style="color: #8c8c8c; font-size: 14px;">点击链接即可复制，分享给他人即可下载</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closeModal('share-modal')">关闭</button>
+                <button class="btn-confirm" onclick="copyShareLink()">复制链接</button>
+            </div>
+        </div>
     </div>
 
     <!-- 新建文件夹模态框 -->
@@ -804,6 +827,17 @@
                     <label>单文件最大大小（MB）</label>
                     <input type="number" id="settings-max-size" placeholder="请输入大小">
                 </div>
+                <div class="form-item">
+                    <label>分享有效期</label>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <input type="number" id="settings-share-expire" placeholder="请输入分钟数" min="1">
+                        <span>分钟</span>
+                        <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                            <input type="checkbox" id="settings-share-permanent" onchange="toggleShareExpire()">
+                            <span>永久</span>
+                        </label>
+                    </div>
+                </div>
             </div>
             <div class="modal-footer">
                 <button class="btn-cancel" onclick="closeModal('settings-modal')">取消</button>
@@ -923,6 +957,9 @@
                 case 'download':
                     downloadFile(moreMenuTarget);
                     break;
+                case 'share':
+                    createShare(moreMenuTarget);
+                    break;
                 case 'copy':
                     copyItem([moreMenuTarget]);
                     break;
@@ -956,6 +993,39 @@
 
             openModal('attr-modal');
         }
+        
+        // 创建分享
+        async function createShare(path) {
+            try {
+                const res = await fetch('/api/create_share', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ path })
+                });
+                const data = await res.json();
+                
+                if (data.code !== 0) {
+                    alert(data.msg);
+                    return;
+                }
+                
+                // 构建分享链接
+                const shareUrl = `${window.location.origin}/share/${data.data.share_id}`;
+                document.getElementById('share-link').value = shareUrl;
+                openModal('share-modal');
+            } catch (e) {
+                alert('创建分享失败：' + e.message);
+            }
+        }
+        
+        // 复制分享链接
+        function copyShareLink() {
+            const shareInput = document.getElementById('share-link');
+            shareInput.select();
+            shareInput.setSelectionRange(0, 99999);
+            document.execCommand('copy');
+            alert('链接已复制到剪贴板');
+        }
 
         // 事件绑定
         function bindEvents() {
@@ -975,6 +1045,9 @@
             };
             document.getElementById('btn-paste').onclick = pasteItem;
             document.getElementById('btn-batch-delete').onclick = toggleBatchMode;
+            
+            // 分享链接点击复制
+            document.getElementById('share-link').onclick = copyShareLink;
 
             bindContextMenuEvents();
             document.onclick = () => {
@@ -1619,9 +1692,30 @@
                 if (data.code === 0) {
                     document.getElementById('settings-username').value = data.data.username;
                     document.getElementById('settings-max-size').value = data.data.upload_max_size / (1024 * 1024);
+                    
+                    // 处理分享有效期
+                    const shareExpire = data.data.share_expire_minutes;
+                    if (shareExpire === 0) {
+                        document.getElementById('settings-share-permanent').checked = true;
+                        document.getElementById('settings-share-expire').disabled = true;
+                        document.getElementById('settings-share-expire').value = '';
+                    } else {
+                        document.getElementById('settings-share-permanent').checked = false;
+                        document.getElementById('settings-share-expire').disabled = false;
+                        document.getElementById('settings-share-expire').value = shareExpire;
+                    }
                 }
             } catch (e) {
                 alert('加载设置失败：' + e.message);
+            }
+        }
+
+        function toggleShareExpire() {
+            const isPermanent = document.getElementById('settings-share-permanent').checked;
+            const expireInput = document.getElementById('settings-share-expire');
+            expireInput.disabled = isPermanent;
+            if (isPermanent) {
+                expireInput.value = '';
             }
         }
 
@@ -1629,6 +1723,12 @@
             const username = document.getElementById('settings-username').value.trim();
             const password = document.getElementById('settings-password').value;
             const maxSizeMB = parseInt(document.getElementById('settings-max-size').value);
+            const isPermanent = document.getElementById('settings-share-permanent').checked;
+            let shareExpireMinutes = 0;
+            
+            if (!isPermanent) {
+                shareExpireMinutes = parseInt(document.getElementById('settings-share-expire').value);
+            }
 
             if (!username) {
                 alert('账号不能为空');
@@ -1636,6 +1736,10 @@
             }
             if (!maxSizeMB || maxSizeMB <= 0) {
                 alert('请输入有效的文件大小');
+                return;
+            }
+            if (!isPermanent && (!shareExpireMinutes || shareExpireMinutes <= 0)) {
+                alert('请输入有效的分享有效期');
                 return;
             }
 
@@ -1646,7 +1750,8 @@
                     body: JSON.stringify({
                         username,
                         password,
-                        upload_max_size: maxSizeMB * 1024 * 1024
+                        upload_max_size: maxSizeMB * 1024 * 1024,
+                        share_expire_minutes: shareExpireMinutes
                     })
                 });
                 const data = await res.json();

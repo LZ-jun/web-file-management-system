@@ -14,7 +14,8 @@
 - **在线编辑**：支持文本文件在线编辑（10MB 以内）
 - **文件预览**：支持图片、视频、音频和文本文件预览
 - **目录树**：直观的目录树导航
-- **系统设置**：可修改账号、密码和上传文件大小限制
+- **文件分享**：支持创建临时或永久分享链接，无需登录即可访问下载
+- **系统设置**：可修改账号、密码、上传文件大小限制和分享有效期
 - **安全机制**：防止目录穿越攻击，会话超时保护
 
 ## 快速开始
@@ -50,8 +51,11 @@ python app.py
 ├── app.py              # Flask 后端应用
 ├── templates/
 │   ├── index.html      # 主界面
-│   └── login.html      # 登录页面
-└── uploads/            # 上传文件存储目录（自动创建）
+│   ├── login.html      # 登录页面
+│   └── share.html      # 分享页面
+├── uploads/            # 上传文件存储目录（自动创建）
+├── config.json         # 系统配置文件（自动生成）
+└── shares.json         # 分享链接数据（自动生成）
 ```
 
 ## 配置说明
@@ -63,7 +67,8 @@ python app.py
   "upload_max_size": 1073741824,  // 最大上传大小（字节，默认 1GB）
   "username": "admin",            // 登录账号
   "password": "sha256_hash",      // 密码的 SHA256 哈希
-  "base_upload_folder": "/workspace/uploads"  // 上传目录
+  "base_upload_folder": "/workspace/uploads",  // 上传目录
+  "share_expire_minutes": 30      // 分享有效期（分钟，0 表示永久）
 }
 ```
 
@@ -95,6 +100,12 @@ python app.py
 
 - `POST /api/get_config` - 获取系统配置
 - `POST /api/save_config` - 保存系统配置
+
+### 分享接口
+
+- `POST /api/create_share` - 创建文件分享链接
+- `GET /share/<share_id>` - 访问分享页面
+- `GET /share/download/<share_id>` - 下载分享的文件
 
 ## 安全特性
 
