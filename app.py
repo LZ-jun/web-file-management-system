@@ -3,6 +3,9 @@ import shutil
 import time
 import secrets
 import json
+import socket
+import webbrowser
+import threading
 from functools import wraps
 from flask import Flask, render_template, request, jsonify, send_from_directory, make_response, session
 from werkzeug.utils import secure_filename
@@ -14,8 +17,6 @@ app.config['SESSION_COOKIE_HTTPONLY'] = True      # 禁止JS读Cookie，防XSS
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'     # 防CSRF
 app.secret_key = os.urandom(24)  # 用于加密Cookie
 
-
-# -------------------------- 配置管理 --------------------------
 # -------------------------- 配置管理 --------------------------
 CONFIG_FILE = 'config.json'
 # 强制默认配置：直接存 SHA256，不再用 werkzeug 的格式
@@ -531,5 +532,24 @@ def create_file():
     except Exception as e:
         return jsonify({'code': -1, 'msg': f'创建失败：{str(e)}'}), 500
 
+def get_free_port():
+    """获取一个可用的随机端口"""
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind(('127.0.0.1', 0))
+    port = s.getsockname()[1]
+    s.close()
+    return port
+
+
+def open_browser(port):
+    """延迟打开浏览器，确保服务器已启动"""
+    time.sleep(1.5)  # 等待服务器启动
+    webbrowser.open(f'http://127.0.0.1:{port}')
+
+
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=80, debug=False)
+    port = get_free_port()
+    # 在后台线程中打开浏览器
+    threading.Thread(target=open_browser, args=(port,), daemon=True).start()
+    print(f"服务器启动中，即将在 http://127.0.0.1:{port} 打开浏览器...")
+    app.run(host='0.0.0.0', port=port, debug=False, use_reloader=False)
