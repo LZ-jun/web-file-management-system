@@ -10,19 +10,57 @@
             padding: 0;
             box-sizing: border-box;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            /* 全局过渡，主题切换更流畅 */
+            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
         }
 
         :root {
-            --primary: #1890ff;
+            --primary: #4080ff;
             --success: #52c41a;
             --warning: #faad14;
             --danger: #ff4d4f;
-            --bg: #f0f2f5;
+            --bg: #f5f7fa;
             --card: #ffffff;
-            --border: #d9d9d9;
-            --text: #262626;
-            --text-secondary: #8c8c8c;
-            --hover: #f5f5f5;
+            --border: #e4e7ed;
+            --text: #303133;
+            --text-secondary: #909399;
+            --hover: #f5f7fa;
+            --shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.08);
+            --shadow-hover: 0 4px 16px 0 rgba(64, 128, 255, 0.15);
+            --sidebar-width: 280px;
+        }
+
+        /* 深色模式变量 */
+        [data-theme="dark"] {
+            --primary: #66a3ff;
+            --success: #67c23a;
+            --warning: #e6a23c;
+            --danger: #f56c6c;
+            --bg: #121218;
+            --card: #1e1e2a;
+            --border: #2d2d3f;
+            --text: #e0e0e0;
+            --text-secondary: #9ca3af;
+            --hover: #2a2a3a;
+            --shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.3);
+            --shadow-hover: 0 4px 16px 0 rgba(102, 163, 255, 0.2);
+        }
+
+        /* 滚动条美化 */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--bg);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-secondary);
         }
 
         body {
@@ -42,11 +80,28 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            box-shadow: var(--shadow);
+            z-index: 10;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+        }
+
+        .header-logo {
+            height: 32px;
+            margin-right: 10px;
+            object-fit: contain;
         }
 
         .header-title {
             font-size: 18px;
-            font-weight: 500;
+            font-weight: 600;
+            background: linear-gradient(135deg, var(--primary), #80b3ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
 
         .header-right {
@@ -65,7 +120,75 @@
         }
 
         .header-right button:hover {
-            background: #096dd9;
+            background: #3370e6;
+        }
+
+        /* 圆形深浅模式切换按钮 - 修复突兀问题 */
+        .theme-toggle {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--hover);
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .theme-toggle:hover {
+            background: var(--primary);
+            transform: rotate(15deg);
+            border-color: var(--primary);
+        }
+        .theme-toggle:hover .icon {
+            color: white;
+        }
+        .theme-toggle .icon {
+            position: absolute;
+            font-size: 18px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .theme-toggle .sun {
+            opacity: 1;
+            transform: rotate(0deg) scale(1);
+        }
+        .theme-toggle .moon {
+            opacity: 0;
+            transform: rotate(90deg) scale(0.8);
+        }
+        /* 深色模式下切换为月亮 */
+        [data-theme="dark"] .theme-toggle .sun {
+            opacity: 0;
+            transform: rotate(-90deg) scale(0.8);
+        }
+        [data-theme="dark"] .theme-toggle .moon {
+            opacity: 1;
+            transform: rotate(0deg) scale(1);
+        }
+        [data-theme="dark"] .theme-toggle:hover {
+            background: var(--primary);
+        }
+
+        /* 按钮通用动效 */
+        button {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        button:hover {
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-hover);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        button:disabled {
+            transform: none !important;
+            box-shadow: none !important;
+            cursor: not-allowed;
+            opacity: 0.6;
         }
 
         /* 主内容区：左右布局 */
@@ -78,13 +201,15 @@
 
         /* 左侧目录树 */
         .sidebar {
-            width: 280px;
+            width: var(--sidebar-width);
             background: var(--card);
             border-right: 1px solid var(--border);
             overflow-y: auto;
             padding: 15px;
             transition: width 0.3s ease, padding 0.3s ease;
             flex-shrink: 0;
+            box-shadow: var(--shadow);
+            z-index: 5;
         }
 
         .sidebar.collapsed {
@@ -93,9 +218,25 @@
             overflow: hidden;
         }
 
+        /* 侧边栏拖动手柄 */
+        .resize-handle {
+            width: 4px;
+            background: var(--border);
+            cursor: col-resize;
+            flex-shrink: 0;
+            z-index: 10;
+            transition: background 0.2s;
+        }
+        .resize-handle:hover, .resize-handle.active {
+            background: var(--primary);
+        }
+        .sidebar.collapsed ~ .resize-handle {
+            display: none;
+        }
+
         .sidebar-toggle {
             position: absolute;
-            left: 280px;
+            left: var(--sidebar-width);
             top: 50%;
             transform: translateY(-50%);
             width: 20px;
@@ -109,10 +250,11 @@
             align-items: center;
             justify-content: center;
             z-index: 100;
-            transition: left 0.3s ease;
+            transition: left 0.3s ease, background 0.2s ease;
         }
 
-        .sidebar.collapsed + .sidebar-toggle {
+        /* 修复侧边栏收起后按钮不缩回去的问题 */
+        .sidebar.collapsed ~ .sidebar-toggle {
             left: 0;
         }
 
@@ -125,7 +267,7 @@
             color: var(--text-secondary);
         }
 
-        .sidebar.collapsed + .sidebar-toggle .sidebar-toggle-icon {
+        .sidebar.collapsed ~ .sidebar-toggle .sidebar-toggle-icon {
             transform: rotate(180deg);
         }
 
@@ -147,10 +289,12 @@
             display: flex;
             align-items: center;
             gap: 8px;
+            transition: padding-left 0.2s ease;
         }
 
         .tree-node-header:hover, .tree-node-header.active {
             background: var(--hover);
+            padding-left: 12px;
         }
 
         .tree-toggle {
@@ -185,6 +329,7 @@
             gap: 10px;
             align-items: center;
             flex-wrap: wrap;
+            box-shadow: var(--shadow);
         }
 
         .toolbar button {
@@ -200,7 +345,7 @@
         }
 
         .toolbar button:hover {
-            background: #096dd9;
+            background: #3370e6;
         }
 
         .toolbar button.danger {
@@ -224,6 +369,7 @@
             display: flex;
             align-items: center;
             gap: 10px;
+            box-shadow: var(--shadow);
         }
 
         .path-breadcrumb {
@@ -256,6 +402,7 @@
             display: flex;
             flex-direction: column;
             background: var(--card);
+            box-shadow: var(--shadow);
         }
 
         .table-header {
@@ -279,14 +426,23 @@
             border-bottom: 1px solid #f0f0f0;
             align-items: center;
             cursor: pointer;
+            transition: all 0.2s ease;
+            border-left: 3px solid transparent;
+        }
+        [data-theme="dark"] .file-item {
+            border-bottom-color: var(--border);
         }
 
         .file-item:hover {
             background: var(--hover);
+            border-left-color: var(--primary);
+            padding-left: 17px;
         }
 
         .file-item.selected {
-            background: #e6f7ff;
+            background: rgba(64, 128, 255, 0.1);
+            border-left-color: var(--primary);
+            padding-left: 17px;
         }
 
         .file-checkbox {
@@ -346,15 +502,18 @@
             width: 180px;
             background: var(--card);
             border: 1px solid var(--border);
-            border-radius: 4px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            box-shadow: var(--shadow);
             z-index: 9999;
             display: none;
+            animation: bounceIn 0.2s ease forwards;
         }
 
         .menu-item {
             padding: 8px 15px;
             cursor: pointer;
+            border-radius: 4px;
+            margin: 2px 4px;
         }
 
         .menu-item:hover {
@@ -396,6 +555,16 @@
         }
 
         /* 模态框通用 */
+        @keyframes fadeIn {
+            from { opacity: 0; backdrop-filter: blur(0px); }
+            to { opacity: 1; backdrop-filter: blur(4px); }
+        }
+        @keyframes bounceIn {
+            0% { transform: scale(0.8); opacity: 0; }
+            70% { transform: scale(1.03); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
         .modal-mask {
             position: fixed;
             top: 0;
@@ -403,22 +572,26 @@
             width: 100%;
             height: 100%;
             background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(4px);
             display: flex;
             align-items: center;
             justify-content: center;
             z-index: 10000;
             display: none;
+            animation: fadeIn 0.2s ease forwards;
         }
 
         .modal-box {
             background: var(--card);
-            border-radius: 8px;
+            border-radius: 12px;
             width: 90%;
             max-width: 600px;
             max-height: 80vh;
             overflow: hidden;
             display: flex;
             flex-direction: column;
+            box-shadow: var(--shadow);
+            animation: bounceIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
         }
 
         .modal-header {
@@ -434,6 +607,11 @@
             cursor: pointer;
             color: var(--text-secondary);
             font-size: 20px;
+            transition: color 0.2s, transform 0.2s;
+        }
+        .modal-close:hover {
+            color: var(--danger);
+            transform: rotate(90deg);
         }
 
         .modal-body {
@@ -458,7 +636,7 @@
         }
 
         .btn-cancel {
-            background: #f5f5f5;
+            background: var(--hover);
             color: var(--text);
         }
 
@@ -488,10 +666,19 @@
             border: 1px solid var(--border);
             border-radius: 4px;
             outline: none;
+            background: var(--card);
+            color: var(--text);
         }
 
         .form-item input:focus, .form-item textarea:focus {
             border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(64, 128, 255, 0.1);
+        }
+
+        .form-tip {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin: 0;
         }
 
         /* 编辑器模态框 */
@@ -536,10 +723,11 @@
         .preview-content pre {
             width: 100%;
             padding: 15px;
-            background: #f6f8fa;
+            background: var(--hover);
             border-radius: 4px;
             overflow-x: auto;
             font-family: 'Consolas', monospace;
+            color: var(--text);
         }
 
         /* 空状态 */
@@ -558,8 +746,16 @@
 <body>
     <!-- 顶部导航 -->
     <div class="header">
-        <div class="header-title">远程存储管理系统</div>
+        <div class="header-left">
+            <img src="/static/logo.png" alt="Logo" class="header-logo" onerror="this.style.display='none'; this.nextElementSibling.style.marginLeft='0'">
+            <div class="header-title">远程存储管理系统</div>
+        </div>
         <div class="header-right">
+            <!-- 圆形深浅模式切换按钮 -->
+            <div class="theme-toggle" id="themeToggle" title="切换深色/浅色模式">
+                <span class="icon sun">☀️</span>
+                <span class="icon moon">🌙</span>
+            </div>
             <button onclick="refreshFileList()">🔄 刷新</button>
             <button onclick="openSettings()">⚙ 设置</button>
             <button onclick="logout()">退出登录</button>
@@ -573,6 +769,8 @@
             <div class="tree-title">📁 目录树</div>
             <div id="dir-tree"></div>
         </div>
+        <!-- 侧边栏拖动手柄 -->
+        <div class="resize-handle" id="resizeHandle"></div>
         <div class="sidebar-toggle" onclick="toggleSidebar()" title="收起/展开目录树">
             <span class="sidebar-toggle-icon">◀</span>
         </div>
@@ -584,7 +782,6 @@
                 <button id="btn-back">⬅ 返回上一级</button>
                 <button id="btn-mkdir">📁 新建文件夹</button>
                 <button id="btn-create-file">📄 创建文件</button>
-                <!-- 修复：给label加id，button加明确的点击触发逻辑 -->
                 <label id="upload-label" for="file-input" style="display: none;"></label>
                 <button type="button" id="btn-upload">📤 上传文件</button>
                 <input type="file" id="file-input" multiple style="display: none;">
@@ -652,9 +849,9 @@
             <div class="modal-body">
                 <div class="form-item">
                     <label>分享链接</label>
-                    <input type="text" id="share-link" readonly style="cursor: pointer; background: #f5f5f5;">
+                    <input type="text" id="share-link" readonly style="cursor: pointer; background: var(--hover);">
                 </div>
-                <p style="color: #8c8c8c; font-size: 14px;">点击链接即可复制，分享给他人即可下载</p>
+                <p style="color: var(--text-secondary); font-size: 14px;">点击链接即可复制，分享给他人即可下载</p>
             </div>
             <div class="modal-footer">
                 <button class="btn-cancel" onclick="closeModal('share-modal')">关闭</button>
@@ -829,14 +1026,11 @@
                 </div>
                 <div class="form-item">
                     <label>分享有效期</label>
-                    <div style="display: flex; gap: 10px; align-items: center;">
-                        <input type="number" id="settings-share-expire" placeholder="请输入分钟数" min="1">
+                    <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 8px;">
+                        <input type="number" id="settings-share-expire" placeholder="请输入分钟数" min="0">
                         <span>分钟</span>
-                        <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
-                            <input type="checkbox" id="settings-share-permanent" onchange="toggleShareExpire()">
-                            <span>永久</span>
-                        </label>
                     </div>
+                    <p class="form-tip">💡 提示：输入 0 表示分享永久有效</p>
                 </div>
             </div>
             <div class="modal-footer">
@@ -859,13 +1053,75 @@
         let isSidebarCollapsed = false;
         let moreMenuTarget = null; // 更多菜单当前操作的文件路径
         let moreMenuFileInfo = {}; // 更多菜单当前文件的详细信息
+        let currentTheme = 'light';
 
         // 初始化
         window.onload = function() {
+            initTheme();
+            initSidebarResize();
             loadDirTree();
             loadFileList();
             bindEvents();
             checkWindowSize();
+        }
+
+        // 初始化主题
+        function initTheme() {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            currentTheme = savedTheme;
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+        }
+
+        // 切换主题
+        function toggleTheme() {
+            currentTheme = currentTheme === 'light' ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', currentTheme);
+            localStorage.setItem('theme', currentTheme);
+        }
+
+        // 初始化侧边栏拖动
+        function initSidebarResize() {
+            const handle = document.getElementById('resizeHandle');
+            const sidebar = document.getElementById('sidebar');
+            let isResizing = false;
+            let startX = 0;
+            let startWidth = 0;
+
+            // 读取保存的侧边栏宽度
+            const savedWidth = localStorage.getItem('sidebarWidth');
+            if (savedWidth) {
+                document.documentElement.style.setProperty('--sidebar-width', `${savedWidth}px`);
+            }
+
+            handle.addEventListener('mousedown', (e) => {
+                if (sidebar.classList.contains('collapsed')) return; // 收起时不能拖动
+                isResizing = true;
+                startX = e.clientX;
+                startWidth = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sidebar-width'));
+                handle.classList.add('active');
+                document.body.style.userSelect = 'none'; // 禁止选中文字
+                e.preventDefault();
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isResizing) return;
+                const deltaX = e.clientX - startX;
+                let newWidth = startWidth + deltaX;
+                // 限制最小200px，最大500px
+                newWidth = Math.max(200, Math.min(500, newWidth));
+                document.documentElement.style.setProperty('--sidebar-width', `${newWidth}px`);
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (!isResizing) return;
+                isResizing = false;
+                handle.classList.remove('active');
+                document.body.style.userSelect = '';
+                // 保存宽度到localStorage
+                const currentWidth = getComputedStyle(document.documentElement).getPropertyValue('--sidebar-width').trim();
+                localStorage.setItem('sidebarWidth', currentWidth.replace('px', ''));
+            });
         }
 
         // 检查窗口大小，自动收起目录树
@@ -891,6 +1147,9 @@
                 sidebar.classList.add('collapsed');
             } else {
                 sidebar.classList.remove('collapsed');
+                // 恢复之前保存的宽度
+                const savedWidth = localStorage.getItem('sidebarWidth') || 280;
+                document.documentElement.style.setProperty('--sidebar-width', `${savedWidth}px`);
             }
         }
 
@@ -1693,29 +1952,12 @@
                     document.getElementById('settings-username').value = data.data.username;
                     document.getElementById('settings-max-size').value = data.data.upload_max_size / (1024 * 1024);
                     
-                    // 处理分享有效期
+                    // 处理分享有效期，直接赋值
                     const shareExpire = data.data.share_expire_minutes;
-                    if (shareExpire === 0) {
-                        document.getElementById('settings-share-permanent').checked = true;
-                        document.getElementById('settings-share-expire').disabled = true;
-                        document.getElementById('settings-share-expire').value = '';
-                    } else {
-                        document.getElementById('settings-share-permanent').checked = false;
-                        document.getElementById('settings-share-expire').disabled = false;
-                        document.getElementById('settings-share-expire').value = shareExpire;
-                    }
+                    document.getElementById('settings-share-expire').value = shareExpire;
                 }
             } catch (e) {
                 alert('加载设置失败：' + e.message);
-            }
-        }
-
-        function toggleShareExpire() {
-            const isPermanent = document.getElementById('settings-share-permanent').checked;
-            const expireInput = document.getElementById('settings-share-expire');
-            expireInput.disabled = isPermanent;
-            if (isPermanent) {
-                expireInput.value = '';
             }
         }
 
@@ -1723,12 +1965,7 @@
             const username = document.getElementById('settings-username').value.trim();
             const password = document.getElementById('settings-password').value;
             const maxSizeMB = parseInt(document.getElementById('settings-max-size').value);
-            const isPermanent = document.getElementById('settings-share-permanent').checked;
-            let shareExpireMinutes = 0;
-            
-            if (!isPermanent) {
-                shareExpireMinutes = parseInt(document.getElementById('settings-share-expire').value);
-            }
+            const shareExpireMinutes = parseInt(document.getElementById('settings-share-expire').value);
 
             if (!username) {
                 alert('账号不能为空');
@@ -1738,8 +1975,8 @@
                 alert('请输入有效的文件大小');
                 return;
             }
-            if (!isPermanent && (!shareExpireMinutes || shareExpireMinutes <= 0)) {
-                alert('请输入有效的分享有效期');
+            if (isNaN(shareExpireMinutes) || shareExpireMinutes < 0) {
+                alert('请输入有效的分享有效期，不能小于0');
                 return;
             }
 
