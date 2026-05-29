@@ -3,7 +3,7 @@ config.json
 shares.json
 # 上传文件夹
 uploads/
-
+files/
 # 备份文件
 *.backup
 
@@ -16,4 +16,5 @@ __pycache__/
 .idea/
 
 # .gitignore
+
 

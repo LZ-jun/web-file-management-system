@@ -28,7 +28,7 @@ DEFAULT_CONFIG = {
     'upload_max_size': 1024 * 1024 * 1024,
     'username': 'admin',
     'password': get_sha256('admin123'),  # 固定字段名：password
-    'base_upload_folder': os.path.abspath('uploads'),
+    'base_upload_folder': os.path.abspath('files'),
     'share_expire_minutes': 30  # 默认分享有效期30分钟
 }
 
@@ -645,6 +645,7 @@ def open_browser(port):
 
 if __name__ == '__main__':
     port = get_free_port()
+    port = 8008
     # 在后台线程中打开浏览器
     threading.Thread(target=open_browser, args=(port,), daemon=True).start()
     print(f"服务器启动中，即将在 http://127.0.0.1:{port} 打开浏览器...")

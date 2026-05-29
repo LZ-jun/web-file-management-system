@@ -10,78 +10,422 @@
             padding: 0;
             box-sizing: border-box;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
         }
+
+        :root {
+            --primary: #4080ff;
+            --secondary: #80b3ff;
+            --danger: #ff4d4f;
+            --bg: #f5f7fa;
+            --card: #ffffff;
+            --border: #e4e7ed;
+            --text: #0b3e86;
+            --text-secondary: #536d92;
+            --glass-bg: rgba(255, 255, 255, 0.9);
+            --glass-border: rgba(64, 128, 255, 0.25);
+            --particle-color: rgba(64, 128, 255, 0.5);
+        }
+
+        [data-theme="dark"] {
+            --primary: #66a3ff;
+            --secondary: #99ccff;
+            --danger: #f56c6c;
+            --bg: #121218;
+            --card: #1e1e2a;
+            --border: #2d2d3f;
+            --text: #f3f4f6;
+            --text-secondary: #d1d5db;
+            --glass-bg: rgba(30, 30, 42, 0.95);
+            --glass-border: rgba(102, 163, 255, 0.35);
+            --particle-color: rgba(102, 163, 255, 0.5);
+        }
+
         body {
-            background: #f0f2f5;
+            background: var(--bg);
             height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
+            overflow: hidden;
+            position: relative;
         }
-        .login-box {
+
+        /* Light mode background icons */
+        .background-icons {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+            opacity: 0.06;
+        }
+
+        .background-icons .icon {
+            position: absolute;
+            font-size: 48px;
+            color: var(--primary);
+            animation: floatIcon 15s ease-in-out infinite;
+        }
+
+        @keyframes floatIcon {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            25% { transform: translate(10px, -10px) rotate(5deg); }
+            50% { transform: translate(-5px, -20px) rotate(-5deg); }
+            75% { transform: translate(-10px, -5px) rotate(3deg); }
+        }
+
+        /* Dark mode galaxy stars */
+        .galaxy-stars {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+            display: none;
+        }
+
+        [data-theme="dark"] .galaxy-stars {
+            display: block;
+        }
+
+        [data-theme="dark"] .background-icons {
+            display: none;
+        }
+
+        .star {
+            position: absolute;
             background: white;
+            border-radius: 50%;
+            animation: twinkle var(--twinkle-duration, 3s) ease-in-out infinite;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.2; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.3); }
+        }
+
+        /* Sci-fi background with animated particles */
+        .particles-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .particle {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background: var(--particle-color);
+            border-radius: 50%;
+            animation: float linear infinite;
+        }
+
+        @keyframes float {
+            0% {
+                transform: translateY(100vh) rotate(0deg);
+                opacity: 0;
+            }
+            10% {
+                opacity: 1;
+            }
+            90% {
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-100vh) rotate(720deg);
+                opacity: 0;
+            }
+        }
+
+        /* Grid lines */
+        .grid-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(64, 128, 255, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(64, 128, 255, 0.05) 1px, transparent 1px);
+            background-size: 50px 50px;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* Glow effect */
+        .glow {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            width: 800px;
+            height: 800px;
+            transform: translate(-50%, -50%);
+            background: radial-gradient(circle, rgba(64, 128, 255, 0.1) 0%, transparent 70%);
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* Theme toggle button */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 100;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .theme-toggle:hover {
+            background: var(--primary);
+            transform: scale(1.1) rotate(15deg);
+            box-shadow: 0 6px 20px rgba(64, 128, 255, 0.3);
+        }
+
+        .theme-toggle:hover .icon {
+            color: white;
+        }
+
+        .theme-toggle .icon {
+            position: absolute;
+            font-size: 22px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .theme-toggle .sun {
+            opacity: 1;
+            transform: rotate(0deg) scale(1);
+        }
+
+        .theme-toggle .moon {
+            opacity: 0;
+            transform: rotate(90deg) scale(0.8);
+        }
+
+        [data-theme="dark"] .theme-toggle .sun {
+            opacity: 0;
+            transform: rotate(-90deg) scale(0.8);
+        }
+
+        [data-theme="dark"] .theme-toggle .moon {
+            opacity: 1;
+            transform: rotate(0deg) scale(1);
+        }
+
+        /* Login box */
+        @keyframes bounceIn {
+            0% { transform: scale(0.8) translateY(20px); opacity: 0; }
+            60% { transform: scale(1.05) translateY(-5px); }
+            100% { transform: scale(1) translateY(0); opacity: 1; }
+        }
+
+        .login-box {
+            position: relative;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
             padding: 40px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-radius: 16px;
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
             width: 100%;
             max-width: 400px;
+            z-index: 10;
+            animation: bounceIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
         }
-        .login-title {
+
+        /* Glowing border effect - teal/blue-green */
+        .login-box::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, #0066ff, #00d4ff, #00ffcc, #0066ff);
+            border-radius: 18px;
+            z-index: -1;
+            opacity: 0.8;
+            animation: borderGlow 4s linear infinite;
+            background-size: 300% 300%;
+        }
+
+        @keyframes borderGlow {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .login-header {
             text-align: center;
             margin-bottom: 30px;
-            font-size: 24px;
-            font-weight: 500;
-            color: #333;
         }
+
+        .login-logo {
+            width: 60px;
+            height: 60px;
+            margin: 0 auto 15px;
+            object-fit: contain;
+        }
+
+        .login-title {
+            font-size: 26px;
+            font-weight: 700;
+            color: var(--text);
+        }
+
         .form-item {
             margin-bottom: 20px;
         }
+
         .form-item label {
             display: block;
             margin-bottom: 8px;
-            font-weight: 500;
-            color: #666;
+            font-weight: 700;
+            color: var(--text);
+            font-size: 15px;
         }
+
         .form-item input {
             width: 100%;
-            padding: 10px 15px;
-            border: 1px solid #d9d9d9;
-            border-radius: 4px;
+            padding: 12px 16px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
             outline: none;
-            font-size: 14px;
+            font-size: 15px;
+            background: var(--card);
+            color: var(--text);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
+
+        .form-item input::placeholder {
+            color: var(--text-secondary);
+        }
+
         .form-item input:focus {
-            border-color: #1890ff;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(64, 128, 255, 0.1);
+            transform: translateY(-1px);
         }
+
         .login-btn {
             width: 100%;
-            padding: 12px;
-            background: #1890ff;
+            padding: 14px;
+            background: linear-gradient(135deg, #009800, #4963f2, #6a7600);
+            background-size: 200% 200%;
             color: white;
             border: none;
-            border-radius: 4px;
+            border-radius: 8px;
             font-size: 16px;
+            font-weight: 700;
             cursor: pointer;
-            transition: background 0.2s;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            animation: btnGradient 3s ease infinite;
         }
+
+        @keyframes btnGradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .login-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .login-btn:hover::before {
+            left: 100%;
+        }
+
         .login-btn:hover {
-            background: #096dd9;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 102, 255, 0.4);
         }
+
+        .login-btn:active {
+            transform: translateY(0);
+        }
+
         .login-btn:disabled {
-            background: #8c8c8c;
+            background: var(--text-secondary);
             cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+            animation: none;
         }
+
         .error-msg {
-            color: #ff4d4f;
+            color: var(--danger);
             text-align: center;
             margin-bottom: 15px;
             display: none;
+            font-size: 14px;
+            padding: 12px;
+            background: rgba(255, 77, 79, 0.1);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 77, 79, 0.2);
+            animation: shake 0.5s ease;
+            font-weight: 600;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
         }
     </style>
 </head>
 <body>
+    <!-- Background elements -->
+    <div class="grid-background"></div>
+    <div class="glow"></div>
+    <div class="particles-container" id="particles"></div>
+
+    <!-- Light mode background icons -->
+    <div class="background-icons" id="backgroundIcons"></div>
+
+    <!-- Dark mode galaxy stars -->
+    <div class="galaxy-stars" id="galaxyStars"></div>
+
+    <!-- Theme toggle -->
+    <div class="theme-toggle" id="themeToggle" title="切换深色/浅色模式">
+        <span class="icon sun">☀️</span>
+        <span class="icon moon">🌙</span>
+    </div>
+
+    <!-- Login box -->
     <div class="login-box">
-        <div class="login-title">远程存储管理系统</div>
+        <div class="login-header">
+            <img src="/static/logo.png" alt="Logo" class="login-logo" onerror="this.style.display='none'">
+            <div class="login-title">远程存储管理系统</div>
+        </div>
         <div class="error-msg" id="error-msg">账号或密码错误</div>
         <div class="form-item">
             <label>账号</label>
@@ -95,7 +439,77 @@
     </div>
 
     <script>
-        // SHA256 哈希函数（浏览器原生实现）
+        // Initialize theme
+        function initTheme() {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+        }
+
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+        }
+
+        // Create floating particles
+        function createParticles() {
+            const container = document.getElementById('particles');
+            const particleCount = 50;
+
+            for (let i = 0; i < particleCount; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.animationDuration = (Math.random() * 20 + 10) + 's';
+                particle.style.animationDelay = (Math.random() * 20) + 's';
+                particle.style.opacity = Math.random() * 0.5 + 0.3;
+                particle.style.width = (Math.random() * 3 + 1) + 'px';
+                particle.style.height = particle.style.width;
+                container.appendChild(particle);
+            }
+        }
+
+        // Create light mode background icons
+        function createBackgroundIcons() {
+            const container = document.getElementById('backgroundIcons');
+            const icons = ['📁', '💾', '📄', '📊', '🔍', '⚡', '🌐', '📱', '📎', '💡', '🎯', '🚀'];
+            const iconCount = 25;
+
+            for (let i = 0; i < iconCount; i++) {
+                const icon = document.createElement('div');
+                icon.className = 'icon';
+                icon.textContent = icons[i % icons.length];
+                icon.style.left = Math.random() * 100 + '%';
+                icon.style.top = Math.random() * 100 + '%';
+                icon.style.animationDelay = (Math.random() * 5) + 's';
+                icon.style.animationDuration = (10 + Math.random() * 10) + 's';
+                container.appendChild(icon);
+            }
+        }
+
+        // Create dark mode galaxy stars
+        function createGalaxyStars() {
+            const container = document.getElementById('galaxyStars');
+            const starCount = 150;
+
+            for (let i = 0; i < starCount; i++) {
+                const star = document.createElement('div');
+                star.className = 'star';
+                star.style.left = Math.random() * 100 + '%';
+                star.style.top = Math.random() * 100 + '%';
+                const size = Math.random() * 3 + 1;
+                star.style.width = size + 'px';
+                star.style.height = size + 'px';
+                star.style.setProperty('--twinkle-duration', (2 + Math.random() * 4) + 's');
+                star.style.animationDelay = Math.random() * 3 + 's';
+                star.style.opacity = Math.random() * 0.8 + 0.2;
+                container.appendChild(star);
+            }
+        }
+
+        // SHA256 hash function
         async function sha256(text) {
             const encoder = new TextEncoder();
             const data = encoder.encode(text);
@@ -117,13 +531,11 @@
                 return;
             }
 
-            // 禁用按钮，防止重复点击
             loginBtn.disabled = true;
             loginBtn.innerText = '登录中...';
             errorMsg.style.display = 'none';
 
             try {
-                // 1. 先获取挑战值（salt + timestamp）
                 const challengeRes = await fetch('/api/get_challenge', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' }
@@ -139,18 +551,15 @@
                 }
 
                 const { salt, timestamp } = challengeData.data;
-
-                // 2. 按照要求计算哈希：hash( hash(password) + salt + str(timestamp) )
                 const passwordHash = await sha256(password);
                 const finalHash = await sha256(passwordHash + salt + timestamp.toString());
 
-                // 3. 发送给后端验证
                 const loginRes = await fetch('/api/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         username,
-                        password_hash: finalHash  // 只传这两个
+                        password_hash: finalHash
                     })
                 });
                 const loginData = await loginRes.json();
@@ -163,7 +572,6 @@
                     return;
                 }
 
-                // 登录成功，跳转主页
                 window.location.href = '/';
             } catch (e) {
                 errorMsg.innerText = '请求失败：' + e.message;
@@ -172,6 +580,15 @@
                 loginBtn.innerText = '登录';
             }
         }
+
+        // Initialize on load
+        window.onload = function() {
+            initTheme();
+            createParticles();
+            createBackgroundIcons();
+            createGalaxyStars();
+            document.getElementById('username').focus();
+        };
     </script>
 </body>
 </html>
