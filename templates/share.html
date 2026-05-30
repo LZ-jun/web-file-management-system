@@ -45,12 +45,13 @@
 
         body {
             background: var(--bg);
-            height: 100vh;
+            min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            overflow: hidden;
+            overflow-x: hidden;
             position: relative;
+            padding: 20px;
         }
 
         /* Light mode background icons */
@@ -62,7 +63,7 @@
             height: 100%;
             z-index: 0;
             pointer-events: none;
-            opacity: 0.06;
+            opacity: 0.2;
         }
 
         .background-icons .icon {
@@ -249,10 +250,9 @@
             border: 1px solid var(--glass-border);
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
             width: 100%;
-            max-width: 500px;
+            max-width: 600px;
             z-index: 10;
             animation: bounceIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-            text-align: center;
         }
 
         /* Glowing border effect - teal/blue-green */
@@ -277,9 +277,14 @@
             100% { background-position: 0% 50%; }
         }
 
+        .share-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
         .share-icon {
             font-size: 80px;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
             display: inline-block;
             animation: floatIcon 3s ease-in-out infinite;
         }
@@ -288,74 +293,114 @@
             font-size: 26px;
             font-weight: 800;
             color: var(--text);
-            margin-bottom: 10px;
         }
 
-        .share-filename {
-            font-size: 18px;
-            margin-bottom: 30px;
-            word-break: break-all;
-            padding: 12px;
+        /* File info */
+        .file-info {
             background: rgba(64, 128, 255, 0.08);
-            border-radius: 8px;
             border: 1px solid rgba(64, 128, 255, 0.15);
-            font-weight: 600;
-            background: linear-gradient(135deg, #002256, #344ffc, #932fff);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
         }
 
-        .download-btn {
-            width: 100%;
-            padding: 14px;
-            background: linear-gradient(135deg, #009800, #4963f2, #6a7600);
-            background-size: 200% 200%;
-            color: white;
+        .file-name-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .file-icon-main {
+            font-size: 36px;
+        }
+
+        .file-name-text {
+            flex: 1;
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text);
+            word-break: break-all;
+        }
+
+        .file-details-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+
+        .file-detail-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .file-detail-label {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .file-detail-value {
+            font-size: 15px;
+            color: var(--text);
+            font-weight: 500;
+        }
+
+        /* Action buttons */
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 14px 16px;
             border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 700;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
             cursor: pointer;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            overflow: hidden;
-            animation: btnGradient 3s ease infinite;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
 
-        @keyframes btnGradient {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
+        .action-btn.primary {
+            background: linear-gradient(135deg, #4080ff, #66a3ff);
+            color: white;
         }
 
-        .download-btn::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-            transition: left 0.5s ease;
-        }
-
-        .download-btn:hover::before {
-            left: 100%;
-        }
-
-        .download-btn:hover {
+        .action-btn.primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 30px rgba(0, 102, 255, 0.4);
+            box-shadow: 0 10px 30px rgba(64, 128, 255, 0.4);
         }
 
-        .download-btn:active {
-            transform: translateY(0);
+        .action-btn.secondary {
+            background: var(--card);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .action-btn.secondary:hover {
+            border-color: var(--primary);
+            background: rgba(64, 128, 255, 0.08);
+        }
+
+        .action-btn.success {
+            background: linear-gradient(135deg, #52c41a, #73d13d);
+            color: white;
+        }
+
+        .action-btn.success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(82, 196, 26, 0.4);
         }
 
         .back-link {
             display: inline-block;
-            margin-top: 20px;
+            margin-top: 24px;
             color: var(--primary);
             text-decoration: none;
             font-size: 15px;
@@ -372,14 +417,152 @@
             color: var(--danger);
         }
 
-        .error-box .share-filename {
-            background: rgba(255, 77, 79, 0.1);
-            border-color: rgba(255, 77, 79, 0.2);
-            margin-bottom: 20px;
-            background: linear-gradient(135deg, #ff4d4f, #f56c6c, #ff7875);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+        /* Modal */
+        .modal-mask {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(4px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            animation: fadeIn 0.2s ease forwards;
+        }
+
+        .modal-mask.show {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; backdrop-filter: blur(0px); }
+            to { opacity: 1; backdrop-filter: blur(4px); }
+        }
+
+        .modal-box {
+            background: var(--card);
+            border-radius: 16px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 90vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            animation: bounceIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        .modal-box.attr-modal {
+            max-width: 500px;
+        }
+
+        .modal-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .modal-close {
+            cursor: pointer;
+            color: var(--text-secondary);
+            font-size: 24px;
+            transition: color 0.2s, transform 0.2s;
+            line-height: 1;
+        }
+
+        .modal-close:hover {
+            color: var(--danger);
+            transform: rotate(90deg);
+        }
+
+        .modal-body {
+            padding: 20px;
+            flex: 1;
+            overflow: auto;
+        }
+
+        .preview-content {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            max-width: 100%;
+            max-height: 70vh;
+            overflow: auto;
+        }
+
+        .preview-content img {
+            max-width: 100%;
+            max-height: 70vh;
+            border-radius: 8px;
+        }
+
+        .preview-content video {
+            max-width: 100%;
+            max-height: 70vh;
+            border-radius: 8px;
+        }
+
+        .preview-content audio {
+            width: 100%;
+        }
+
+        .preview-content pre {
+            width: 100%;
+            padding: 20px;
+            background: var(--bg);
+            border-radius: 8px;
+            overflow-x: auto;
+            font-family: 'Consolas', 'Monaco', monospace;
+            color: var(--text);
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .preview-content .unsupported {
+            padding: 40px;
+            text-align: center;
+            color: var(--text-secondary);
+        }
+
+        /* Attributes */
+        .attr-items {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .attr-item {
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .attr-item:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .attr-label {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+
+        .attr-value {
+            font-size: 15px;
+            color: var(--text);
+            font-weight: 500;
+            word-break: break-all;
+        }
+
+        .center {
+            text-align: center;
         }
     </style>
 </head>
@@ -403,23 +586,247 @@
 
     {% if error %}
     <div class="share-box error-box">
-        <div class="share-icon">⚠️</div>
-        <div class="share-title">分享无效</div>
-        <div class="share-filename">{{ error }}</div>
-        <a href="/" class="back-link">返回首页</a>
+        <div class="share-header">
+            <div class="share-icon">⚠️</div>
+            <div class="share-title">分享无效</div>
+        </div>
+        <div class="file-info">
+            <div class="center" style="color: var(--text-secondary); font-size: 18px;">{{ error }}</div>
+        </div>
+        <div class="center">
+            <a href="/" class="back-link">返回首页</a>
+        </div>
     </div>
     {% else %}
     <div class="share-box">
-        <div class="share-icon">📁</div>
-        <div class="share-title">文件分享</div>
-        <div class="share-filename">{{ share.filename }}</div>
-        <button class="download-btn" onclick="window.location.href='/share/download/{{ share_id }}'">
-            立即下载
-        </button>
+        <div class="share-header">
+            <div class="share-icon">📁</div>
+            <div class="share-title">文件分享</div>
+        </div>
+
+        <div class="file-info">
+            <div class="file-name-row">
+                <span class="file-icon-main" id="fileIcon">📄</span>
+                <span class="file-name-text">{{ share.filename }}</span>
+            </div>
+            <div class="file-details-grid">
+                <div class="file-detail-item">
+                    <span class="file-detail-label">文件大小</span>
+                    <span class="file-detail-value">{{ share.size_format }}</span>
+                </div>
+                <div class="file-detail-item">
+                    <span class="file-detail-label">修改时间</span>
+                    <span class="file-detail-value">{{ share.mtime }}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="action-buttons">
+            <button class="action-btn secondary" onclick="openPreview()">
+                <span>👁️</span> 预览
+            </button>
+            <button class="action-btn primary" onclick="openAttr()">
+                <span>📋</span> 属性
+            </button>
+            <button class="action-btn success" onclick="window.location.href='/share/download/{{ share_id }}'">
+                <span>⬇️</span> 下载
+            </button>
+        </div>
     </div>
     {% endif %}
 
+    <!-- Preview Modal -->
+    <div class="modal-mask" id="previewModal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <span>文件预览</span>
+                <span class="modal-close" onclick="closeModal('previewModal')">×</span>
+            </div>
+            <div class="modal-body">
+                <div class="preview-content" id="previewContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Attributes Modal -->
+    <div class="modal-mask" id="attrModal">
+        <div class="modal-box attr-modal">
+            <div class="modal-header">
+                <span>文件属性</span>
+                <span class="modal-close" onclick="closeModal('attrModal')">×</span>
+            </div>
+            <div class="modal-body">
+                <div class="attr-items" id="attrItems"></div>
+            </div>
+        </div>
+    </div>
+
     <script>
+        const shareId = '{{ share_id }}';
+        const fileExt = '{{ share.ext }}'.toLowerCase();
+        const fileName = '{{ share.filename }}';
+
+        function getFileIcon(ext) {
+            ext = ext.toLowerCase();
+            const imageExts = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg', '.ico'];
+            const videoExts = ['.mp4', '.webm', '.avi', '.mov', '.mkv'];
+            const audioExts = ['.mp3', '.wav', '.ogg', '.flac', '.aac'];
+            const docExts = ['.doc', '.docx', '.pdf', '.txt', '.md', '.rtf'];
+            const codeExts = ['.html', '.css', '.js', '.py', '.java', '.c', '.cpp', '.json', '.xml'];
+            const archiveExts = ['.zip', '.rar', '.7z', '.tar', '.gz'];
+            
+            if (imageExts.includes(ext)) return '🖼️';
+            if (videoExts.includes(ext)) return '🎬';
+            if (audioExts.includes(ext)) return '🎵';
+            if (docExts.includes(ext)) return '📄';
+            if (codeExts.includes(ext)) return '💻';
+            if (archiveExts.includes(ext)) return '📦';
+            return '📄';
+        }
+
+        function isTextFile(ext) {
+            ext = ext.toLowerCase();
+            const textExts = ['.txt', '.md', '.json', '.xml', '.html', '.css', '.js', '.py', '.java', '.c', '.cpp', '.h', '.csv', '.log', '.rtf'];
+            return textExts.includes(ext);
+        }
+
+        function isImageFile(ext) {
+            ext = ext.toLowerCase();
+            const imageExts = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg', '.ico'];
+            return imageExts.includes(ext);
+        }
+
+        function isVideoFile(ext) {
+            ext = ext.toLowerCase();
+            const videoExts = ['.mp4', '.webm', '.ogg'];
+            return videoExts.includes(ext);
+        }
+
+        function isAudioFile(ext) {
+            ext = ext.toLowerCase();
+            const audioExts = ['.mp3', '.wav', '.ogg', '.aac'];
+            return audioExts.includes(ext);
+        }
+
+        // Update file icon
+        document.getElementById('fileIcon').textContent = getFileIcon(fileExt);
+
+        function openPreview() {
+            const previewUrl = '/share/preview/' + shareId;
+            const previewContent = document.getElementById('previewContent');
+            previewContent.innerHTML = '';
+
+            if (isImageFile(fileExt)) {
+                const img = document.createElement('img');
+                img.src = previewUrl;
+                img.alt = fileName;
+                previewContent.appendChild(img);
+            } else if (isVideoFile(fileExt)) {
+                const video = document.createElement('video');
+                video.src = previewUrl;
+                video.controls = true;
+                video.style.maxWidth = '100%';
+                video.style.maxHeight = '70vh';
+                previewContent.appendChild(video);
+            } else if (isAudioFile(fileExt)) {
+                const audio = document.createElement('audio');
+                audio.src = previewUrl;
+                audio.controls = true;
+                audio.style.width = '100%';
+                previewContent.appendChild(audio);
+            } else if (isTextFile(fileExt)) {
+                fetch(previewUrl)
+                    .then(response => {
+                        if (response.ok) {
+                            return response.text();
+                        }
+                        throw new Error('无法读取文件');
+                    })
+                    .then(text => {
+                        const pre = document.createElement('pre');
+                        pre.textContent = text;
+                        previewContent.appendChild(pre);
+                    })
+                    .catch(() => {
+                        showUnsupportedPreview(previewContent, previewUrl);
+                    });
+            } else {
+                showUnsupportedPreview(previewContent, previewUrl);
+            }
+
+            document.getElementById('previewModal').classList.add('show');
+        }
+
+        function showUnsupportedPreview(container, downloadUrl) {
+            container.innerHTML = `
+                <div class="unsupported">
+                    <div style="font-size: 48px; margin-bottom: 16px;">📄</div>
+                    <p>此文件类型不支持直接预览</p>
+                    <p style="margin-top: 16px;">
+                        <a href="${downloadUrl}" style="color: var(--primary); text-decoration: underline; cursor: pointer;">
+                            点击下载查看
+                        </a>
+                    </p>
+                </div>
+            `;
+        }
+
+        function openAttr() {
+            fetch('/share/attr/' + shareId)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.code === 0) {
+                        const attrData = data.data;
+                        const attrItems = document.getElementById('attrItems');
+                        attrItems.innerHTML = `
+                            <div class="attr-item">
+                                <div class="attr-label">文件名</div>
+                                <div class="attr-value">${escapeHtml(attrData.name)}</div>
+                            </div>
+                            <div class="attr-item">
+                                <div class="attr-label">文件类型</div>
+                                <div class="attr-value">${attrData.ext || '无'}</div>
+                            </div>
+                            <div class="attr-item">
+                                <div class="attr-label">文件大小</div>
+                                <div class="attr-value">${attrData.size_format} (${attrData.size} 字节)</div>
+                            </div>
+                            <div class="attr-item">
+                                <div class="attr-label">修改时间</div>
+                                <div class="attr-value">${attrData.mtime}</div>
+                            </div>
+                            <div class="attr-item">
+                                <div class="attr-label">文件路径</div>
+                                <div class="attr-value">${escapeHtml(attrData.path)}</div>
+                            </div>
+                        `;
+                        document.getElementById('attrModal').classList.add('show');
+                    }
+                })
+                .catch(err => {
+                    console.error('获取属性失败', err);
+                });
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('show');
+        }
+
+        // Close modal when clicking outside
+        document.querySelectorAll('.modal-mask').forEach(modal => {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.classList.remove('show');
+                }
+            });
+        });
+
         // Initialize theme
         function initTheme() {
             const savedTheme = localStorage.getItem('theme') || 'light';
@@ -456,7 +863,7 @@
         function createBackgroundIcons() {
             const container = document.getElementById('backgroundIcons');
             const icons = ['📁', '💾', '📄', '📊', '🔍', '⚡', '🌐', '📱', '📎', '💡', '🎯', '🚀'];
-            const iconCount = 25;
+            const iconCount = 45;
 
             for (let i = 0; i < iconCount; i++) {
                 const icon = document.createElement('div');
@@ -473,7 +880,7 @@
         // Create dark mode galaxy stars
         function createGalaxyStars() {
             const container = document.getElementById('galaxyStars');
-            const starCount = 150;
+            const starCount = 230;
 
             for (let i = 0; i < starCount; i++) {
                 const star = document.createElement('div');

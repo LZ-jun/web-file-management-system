@@ -545,6 +545,13 @@ def create_share():
     if os.path.isdir(full_path):
         return jsonify({'code': -1, 'msg': '暂不支持分享文件夹'}), 400
     
+    # 获取文件详细信息
+    stat_info = os.stat(full_path)
+    file_size = stat_info.st_size
+    size_format = format_size(file_size)
+    mtime = format_time(stat_info.st_mtime)
+    ext = os.path.splitext(os.path.basename(full_path))[1].lower()
+    
     # 生成唯一分享 ID
     share_id = secrets.token_urlsafe(16)
     current_time = int(time.time())
@@ -556,6 +563,10 @@ def create_share():
     shares[share_id] = {
         'path': user_path,
         'filename': os.path.basename(full_path),
+        'size': file_size,
+        'size_format': size_format,
+        'mtime': mtime,
+        'ext': ext,
         'created_at': current_time,
         'expire_at': expire_time  # None 表示永久
     }
@@ -576,12 +587,78 @@ def access_share(share_id):
         save_shares(shares)
         return render_template('share.html', error='分享链接已过期')
     
-    # 检查文件是否还存在
+    # 检查文件是否还存在，并获取最新文件信息（以防文件被修改）
     full_path = get_safe_path(share['path'])
     if full_path is None or not os.path.exists(full_path):
         return render_template('share.html', error='分享的文件已不存在')
     
-    return render_template('share.html', share=share, share_id=share_id)
+    # 获取最新的文件信息
+    stat_info = os.stat(full_path)
+    file_size = stat_info.st_size
+    size_format = format_size(file_size)
+    mtime = format_time(stat_info.st_mtime)
+    ext = os.path.splitext(os.path.basename(full_path))[1].lower()
+    
+    # 更新分享信息中的文件属性
+    updated_share = share.copy()
+    updated_share['size'] = file_size
+    updated_share['size_format'] = size_format
+    updated_share['mtime'] = mtime
+    updated_share['ext'] = ext
+    
+    return render_template('share.html', share=updated_share, share_id=share_id)
+
+@app.route('/share/preview/<share_id>')
+def preview_share_file(share_id):
+    global shares
+    share = shares.get(share_id)
+    if not share:
+        return '分享链接无效或已过期', 404
+    
+    # 检查过期
+    if share.get('expire_at') is not None and int(time.time()) > share['expire_at']:
+        del shares[share_id]
+        save_shares(shares)
+        return '分享链接已过期', 404
+    
+    full_path = get_safe_path(share['path'])
+    if full_path is None or not os.path.exists(full_path):
+        return '分享的文件已不存在', 404
+    
+    directory, filename = os.path.split(full_path)
+    return send_from_directory(directory, filename)
+
+@app.route('/share/attr/<share_id>')
+def get_share_attr(share_id):
+    global shares
+    share = shares.get(share_id)
+    if not share:
+        return jsonify({'code': -1, 'msg': '分享链接无效或已过期'}), 404
+    
+    # 检查过期
+    if share.get('expire_at') is not None and int(time.time()) > share['expire_at']:
+        del shares[share_id]
+        save_shares(shares)
+        return jsonify({'code': -1, 'msg': '分享链接已过期'}), 404
+    
+    full_path = get_safe_path(share['path'])
+    if full_path is None or not os.path.exists(full_path):
+        return jsonify({'code': -1, 'msg': '分享的文件已不存在'}), 404
+    
+    # 获取最新的文件信息
+    stat_info = os.stat(full_path)
+    return jsonify({
+        'code': 0,
+        'data': {
+            'name': os.path.basename(full_path),
+            'type': 'file',
+            'size': stat_info.st_size,
+            'size_format': format_size(stat_info.st_size),
+            'mtime': format_time(stat_info.st_mtime),
+            'ext': os.path.splitext(os.path.basename(full_path))[1].lower(),
+            'path': share['path']
+        }
+    })
 
 @app.route('/share/download/<share_id>')
 def download_share(share_id):
